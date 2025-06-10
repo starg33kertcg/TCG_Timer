@@ -1,1 +1,5 @@
-
+{
+  "admin_pin_unhashed": "WILL_BE_SET_BY_SETUP_SCRIPT",
+  "admin_pin_hashed": null,
+  "logos": []
+}
