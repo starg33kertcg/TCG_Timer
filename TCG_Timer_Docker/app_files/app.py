@@ -16,7 +16,8 @@ ADMIN_PIN = os.environ.get('ADMIN_PIN') # Get the admin PIN
 if not app.secret_key or not ADMIN_PIN:
     raise ValueError("SECRET_KEY and ADMIN_PIN must be set as environment variables.")
 
-CONFIG_FILE = 'config.json'
+CONFIG_DIR = 'config'
+CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -36,6 +37,8 @@ def load_config():
             return {"logos": []} # Return default if file is empty or corrupted
 
 def save_config(data_to_save):
+    # Ensure the config directory exists before trying to write to it
+    os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CONFIG_FILE, 'w') as f:
         json.dump(data_to_save, f, indent=4)
 
