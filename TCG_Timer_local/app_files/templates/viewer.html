@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCG Timer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.css') }}">
+</head>
+<body>
+    <div class="timer-container">
+        <div id="timer-1-wrapper" class="timer-wrapper" style="display:none;">
+            <img id="timer-1-logo" class="logo-img" src="#" alt="Timer 1 Logo" style="display:none;">
+            <div id="timer-1-text" class="timer-text">00h00m00s</div>
+        </div>
+        <div id="timer-2-wrapper" class="timer-wrapper" style="display:none;">
+            <img id="timer-2-logo" class="logo-img" src="#" alt="Timer 2 Logo" style="display:none;">
+            <div id="timer-2-text" class="timer-text">00h00m00s</div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/viewer.js') }}"></script>
+</body>
+</html>
