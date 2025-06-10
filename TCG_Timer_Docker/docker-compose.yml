@@ -10,7 +10,7 @@ services:
     volumes:
       # Named volumes for persistent data
       - logos_volume:/app/static/uploads # Persist uploaded logos
-      - config_volume:/app/config.json    # Persist the logo configuration
+      - config_volume:/app/config    # Persist the logo configuration
     env_file:
       - ./.env # Load environment variables from the .env file
 
