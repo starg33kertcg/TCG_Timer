@@ -1,1 +1,73 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <style>
+        body.login-body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #333; /* Dark background for the page */
+            margin: 0;
+        }
+        .login-container {
+            background-color: #444; /* Slightly lighter container */
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 300px;
+        }
+        .login-container h2 {
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        .login-container input[type="password"], .login-container input[type="text"] { /* For PIN, text for easier mobile input sometimes */
+            width: calc(100% - 20px);
+            padding: 15px 10px;
+            margin-bottom: 20px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background-color: #555;
+            color: #fff;
+            font-size: 1.5em;
+            text-align: center;
+            letter-spacing: 0.3em; /* Spacing for PIN digits */
+        }
+        .login-container button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background-color: #007bff;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .login-container button:hover {
+            background-color: #0056b3;
+        }
+        .error-message {
+            color: #ff6b6b; /* Light red for errors */
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <h2>Enter Admin PIN</h2>
+        <form method="POST">
+            <input type="password" name="pin" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="5" required>
+            <button type="submit">Unlock</button>
+        </form>
+        {% if error %}
+            <p class="error-message">{{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
