@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY app_files/ .
 
+# --- NEW: Create config directory and set permissions ---
+RUN mkdir -p /app/config && chown timer:timer /app/config
+
 # Ensure the uploads directory exists and is owned by the app user
 # This is where the volume will be mounted
 RUN mkdir -p /app/static/uploads && chown -R timer:timer /app/static
@@ -28,6 +31,4 @@ USER timer
 EXPOSE 8000
 
 # Define the command to run your app using Gunicorn
-# Using 1 worker as an example
-# Binding to 0.0.0.0 is crucial for the container to be reachable
-CMD ["gunicorn", "--workers", "1", "--bind", "0.0.0.0:8000", "app:app"]
+CMD ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:8000", "app:app"]
