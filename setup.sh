@@ -104,6 +104,25 @@ apt-get update -q || { print_error "apt-get update failed."; exit 1; }
 apt-get install -y -q nginx curl ufw $PYTHON_EXEC $PYTHON_EXEC-pip $PYTHON_EXEC-venv gunicorn || { print_error "Failed to install dependencies."; exit 1; }
 print_success "System dependencies installed."
 
+# --- Check for and Disable Conflicting Web Servers ---
+print_info "Checking for conflicting web servers like Apache..."
+
+# Check if the apache2 service exists on the system
+if systemctl list-unit-files | grep -q '^apache2.service'; then
+  print_warning "Apache2 service detected. It will be stopped and disabled to prevent conflicts with Nginx."
+  
+  # Stop the apache2 service if it's running
+  systemctl stop apache2
+  
+  # Disable the apache2 service to prevent it from starting on boot
+  systemctl disable apache2
+  
+  print_success "Apache2 service has been stopped and disabled."
+else
+  print_info "No conflicting Apache2 service found."
+fi
+# --- END NEW SECTION ---
+
 # --- Create or Validate Application User ---
 if id "$APP_USER" &>/dev/null; then
   print_warning "User '$APP_USER' already exists."
