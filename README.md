@@ -75,11 +75,7 @@ When completed, access the viewer at http://SERVERIP and the admin panel at http
 ## Troubleshooting
 ***Receiving a "Failed to reload/restart nginx" error after running the setup.sh script"***
 
-Check to see if Apache is running (or similar service operating on TCP/80). As long as nothing critical is running on Apache, you can safely disable it and then reload Nginx.
+Check to see if a conflicting web server is running on TCP/80.
 ```
 sudo ss -tlpn | grep ':80'
-sudo systemctl stop apache2
-sudo systemctl disable apache2
-sudo systemctl start nginx
-sudo systemctl status nginx
 ```
