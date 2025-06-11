@@ -104,15 +104,16 @@ apt-get update -q || { print_error "apt-get update failed."; exit 1; }
 apt-get install -y -q nginx curl ufw $PYTHON_EXEC $PYTHON_EXEC-pip $PYTHON_EXEC-venv gunicorn || { print_error "Failed to install dependencies."; exit 1; }
 print_success "System dependencies installed."
 
-# --- Create Application User ---
+# --- Create or Validate Application User ---
 if id "$APP_USER" &>/dev/null; then
-  print_warning "User '$APP_USER' already exists. Ensuring it has /bin/false shell."
-  usermod -s /bin/false "$APP_USER" # Ensure shell is /bin/false for existing user if it was different
+  print_warning "User '$APP_USER' already exists."
+  print_warning "Using an existing interactive user for a service application is not recommended for security reasons, but the setup will proceed."
+  print_info "Normally you would create a service user to manage an app. Since this is an existing user, we will not modify the graphical shell permissions to prevent lockout."
 else
-  print_info "Creating application user '$APP_USER'..."
-  # Create a system user with no login shell, and create a group with the same name
+  print_info "Creating new dedicated application user '$APP_USER'..."
+  # Create a system user with no login shell and create a primary group with the same name.
   useradd -r -s /bin/false -U "$APP_USER" || { print_error "Failed to create user '$APP_USER'."; exit 1; }
-  print_success "User '$APP_USER' and group '$APP_USER' created."
+  print_success "New user '$APP_USER' and group '$APP_USER' created."
 fi
 
 # --- Add www-data to APP_USER's group ---
