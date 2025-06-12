@@ -1,4 +1,4 @@
-# TCG_Timer
+# TCG Timer
 ## Contents
 About -  [Link](#about-tcg-timer)
 
