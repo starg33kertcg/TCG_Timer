@@ -102,4 +102,4 @@ Appreciating the app? Consider donating a booster pack or two via Venmo **@starg
 <br>There is no Windows support at this time.
 
 ***"Can I run the app in Docker?"***
-<br>You can build your own Docker image and run it using Docker compose. I'm currently working on a fully automated Docker install for those interested!
+<br>Yes! See our <a href="https://github.com/starg33kertcg/TCG_Timer_Docker/tree/main">Docker installation page</a>
