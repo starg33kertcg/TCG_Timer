@@ -45,7 +45,7 @@ Admin Login
 ![admin_login](https://github.com/user-attachments/assets/d6912ce2-0bb5-4ccf-b48d-0eedc8e1c2ab)
 Admin Dashboard (Light Theme)
 ![timer_admin](https://github.com/user-attachments/assets/27a5875c-2c7b-4a4c-86fe-9910e694f1ec)
-Admin Dashbaord (Dark Theme)
+Admin Dashboard (Dark Theme)
 ![timer_admin_dark](https://github.com/user-attachments/assets/eadc54f3-d4c5-46d7-abbf-5a8938c561a3)
 
 ## Local Install Method (Debian/Ubuntu)
