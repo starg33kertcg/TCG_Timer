@@ -82,13 +82,13 @@ When completed, access the viewer at http://SERVERIP and the admin panel at http
 ***Receiving a "Failed to reload/restart nginx" error after running the setup.sh script***
 
 Check to see if a conflicting web server is running on TCP/80.
+```
+sudo ss -tlpn | grep ':80'
+```
 
 ***Receiving a "Logo upload failed." message when uploading a logo file or Nginx 413 (Request Entity Too Large) error***
 
 The file size of the logo you tried to upload is too large. The file size maximum is 1MB. Try reducing the size of the logo and try again.
-```
-sudo ss -tlpn | grep ':80'
-```
 
 ## Support
 Have questions? Submit your inquiries to starg33kertcg@gmail.com
