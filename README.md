@@ -30,23 +30,24 @@ Best of all? It's yours to use for FREE! I understand that profit margins are na
   - Supports up two timers on one viewer
   - Scales automatically
   - 00h00m00s format
-  - Text turns red under 5 minutes
+  - Text turns red under 5 minutes (with ability to disable the feature or change the threshold to your preference) (v1.1)
   - Displays "TIMES UP" when expired
 - Logo importing and updating in real-time (.PNGs preferred)
-- Light/Dark themes (Admin dashboard only)
-- Mobile compatibility
+- Theme control
+  - Light/Dark theme toggles (Admin dashboard only)
+  - Basic theme options to update the viewer (v1.1)
 
 ## Screenshots
 Single Timer
 ![single_timer](https://github.com/user-attachments/assets/35fe5716-5a92-49e1-acda-2973c6a7ab8c)
 Dual Timer
-![dual_timer](https://github.com/user-attachments/assets/afc9ad3d-c0ce-41bd-b9c6-6fdabe6774a6)
+![image](https://github.com/user-attachments/assets/28ce7997-362b-43f3-882e-1f241d03647b)
 Admin Login
 ![admin_login](https://github.com/user-attachments/assets/d6912ce2-0bb5-4ccf-b48d-0eedc8e1c2ab)
 Admin Dashboard (Light Theme)
-![timer_admin](https://github.com/user-attachments/assets/27a5875c-2c7b-4a4c-86fe-9910e694f1ec)
+![image](https://github.com/user-attachments/assets/124b48bf-7460-48f4-8684-7fb43a46cd8f)
 Admin Dashboard (Dark Theme)
-![timer_admin_dark](https://github.com/user-attachments/assets/eadc54f3-d4c5-46d7-abbf-5a8938c561a3)
+![image](https://github.com/user-attachments/assets/d90bc386-1291-45a5-acb2-eccf4bf80c1e)
 
 ## Local Install Method (Debian/Ubuntu)
 <a name="local-install-method"></a>
