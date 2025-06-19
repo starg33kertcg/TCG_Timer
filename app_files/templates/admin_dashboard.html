@@ -11,6 +11,7 @@
         <h1>TCG Timer Admin</h1>
         <div class="theme-logout">
             <button id="theme-toggle">Toggle Theme</button>
+            <button id="change-pin-btn">Change PIN</button>
             <a href="{{ url_for('logout') }}" class="button-like">Logout</a>
         </div>
     </header>
@@ -67,7 +68,51 @@
                 {% endfor %}
             </ul>
         </section>
+        <section class="theme-management">
+            <h2>Viewer Theme Settings</h2>
+            <form id="theme-settings-form">
+                <div class="form-row">
+                    <label for="background-color">Background Color:</label>
+                    <input type="color" id="background-color" value="#000000">
+                </div>
+                <div class="form-row">
+                    <label for="font-color">Font Color:</label>
+                    <input type="color" id="font-color" value="#FFFFFF">
+                </div>
+                <div class="form-row">
+                    <label for="low-time-minutes">Low Time Warning (minutes):</label>
+                    <input type="number" id="low-time-minutes" min="1" value="5">
+                </div>
+                <div class="form-row">
+                    <label for="low-time-warning-enable">Enable Low Time Warning:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="low-time-warning-enable" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <button type="submit">Save Theme</button>
+            </form>
+        </section>
     </main>
+    <div id="change-pin-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Change Admin PIN</h2>
+            <form id="change-pin-form">
+                <label for="current-pin">Current PIN:</label>
+                <input type="password" id="current-pin" inputmode="numeric" maxlength="5" required>
+                
+                <label for="new-pin1">New PIN:</label>
+                <input type="password" id="new-pin1" inputmode="numeric" maxlength="5" required>
+
+                <label for="new-pin2">Confirm New PIN:</label>
+                <input type="password" id="new-pin2" inputmode="numeric" maxlength="5" required>
+                
+                <button type="submit">Update PIN</button>
+                <p id="pin-change-status" class="status-message"></p>
+            </form>
+        </div>
+    </div>
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 </body>
 </html>
