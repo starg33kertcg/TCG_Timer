@@ -1,5 +1,11 @@
 {
   "admin_pin_unhashed": "WILL_BE_SET_BY_SETUP_SCRIPT",
   "admin_pin_hashed": null,
-  "logos": []
+  "logos": [],
+  "theme": {
+    "background": "#000000",
+    "font_color": "#FFFFFF",
+    "low_time_minutes": 5,
+    "warning_enabled": true
+  }
 }
