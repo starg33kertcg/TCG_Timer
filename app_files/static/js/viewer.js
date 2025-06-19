@@ -14,21 +14,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
-    // formatTime function
+    let currentTheme = { // Object to hold the latest theme settings
+        low_time_minutes: 5,
+        warning_enabled: true
+    }; 
+
     function formatTime(totalSeconds) {
         if (totalSeconds < 0) totalSeconds = 0;
         const h = Math.floor(totalSeconds / 3600);
         const m = Math.floor((totalSeconds % 3600) / 60);
         const s = totalSeconds % 60;
 
-        if (h === 0) { // If hours are zero
+        if (h === 0) {
             return `${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
         } else {
             return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
         }
     }
 
-    // updateTimerDisplay function
     function updateTimerDisplay(timerId, data) {
         const elements = timerElements[timerId];
         if (!elements) return;
@@ -42,28 +45,31 @@ document.addEventListener('DOMContentLoaded', function () {
             if (data.times_up) {
                 elements.textEl.textContent = 'TIMES UP';
                 elements.textEl.classList.add('times-up');
-                elements.textEl.classList.remove('less-than-5', 'timer-text-mm-ss'); // Ensure mm-ss class is removed
+                elements.textEl.classList.remove('low-time-warning', 'timer-text-mm-ss');
             } else {
                 elements.textEl.textContent = formatTime(displayTimeSeconds);
                 elements.textEl.classList.remove('times-up');
 
-                // ADD/REMOVE class for MMmSSs formatting
+                // Add/remove class for MMmSSs font size formatting
                 const hoursRemaining = Math.floor(displayTimeSeconds / 3600);
                 if (hoursRemaining === 0) {
                     elements.textEl.classList.add('timer-text-mm-ss');
                 } else {
                     elements.textEl.classList.remove('timer-text-mm-ss');
                 }
-                // END ADD/REMOVE
 
-                if (displayTimeSeconds > 0 && displayTimeSeconds < 300 && data.is_running) { // Less than 5 minutes and running
-                    elements.textEl.classList.add('less-than-5');
+                // Apply low time warning based on theme settings
+                const lowTimeSeconds = (currentTheme.low_time_minutes || 5) * 60;
+                const warningEnabled = currentTheme.warning_enabled !== false;
+                
+                if (warningEnabled && displayTimeSeconds > 0 && displayTimeSeconds < lowTimeSeconds && data.is_running) {
+                    elements.textEl.classList.add('low-time-warning');
                 } else {
-                    elements.textEl.classList.remove('less-than-5');
+                    elements.textEl.classList.remove('low-time-warning');
                 }
             }
 
-            if (data.logo_filename && data.logo_filename !== "None") { // Ensure "None" string check if backend might send it
+            if (data.logo_filename && data.logo_filename !== "None") {
                 elements.logoEl.src = `/static/uploads/${data.logo_filename}`;
                 elements.logoEl.style.display = 'block';
             } else {
@@ -74,10 +80,17 @@ document.addEventListener('DOMContentLoaded', function () {
             elements.visible = false;
         }
     }
+    
+    // New function to apply the theme from fetched data
+    function applyTheme(theme) {
+        if (!theme) return;
+        currentTheme = theme; // Store for use in updateTimerDisplay
+        document.body.style.backgroundColor = theme.background || '#000000';
+        document.body.style.color = theme.font_color || '#FFFFFF';
+    }
 
     function adjustLayout() {
         const visibleTimers = Object.values(timerElements).filter(t => t.visible).length;
-        // const container = document.querySelector('.timer-container'); // Not strictly needed to modify container class directly
         
         Object.values(timerElements).forEach(timer => {
             timer.wrapper.classList.remove('single-active', 'dual-active');
@@ -98,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Main polling function, now handles new API response structure
     async function fetchTimerStates() {
         try {
             const response = await fetch('/api/timer_status');
@@ -106,9 +120,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             const data = await response.json();
-            for (const timerId in data) {
-                if (timerElements[timerId] && data.hasOwnProperty(timerId)) {
-                    updateTimerDisplay(timerId, data[timerId]);
+            
+            // Apply theme from the API response first
+            if (data.theme) {
+                applyTheme(data.theme);
+            }
+
+            // Update timers using the 'timers' sub-object
+            const timersData = data.timers || {};
+            for (const timerId in timerElements) {
+                if (timersData.hasOwnProperty(timerId)) {
+                    updateTimerDisplay(timerId, timersData[timerId]);
+                } else {
+                    // If a timer is missing from response, treat it as disabled
+                    updateTimerDisplay(timerId, { enabled: false });
                 }
             }
             adjustLayout();
