@@ -81,7 +81,7 @@ body, html {
     font-size: min(15vh, 8vw); 
 }
 
-.timer-text.less-than-5 {
+.low-time-warning { /* Renamed from timer.less-than-5 */
     color: red;
 }
 
