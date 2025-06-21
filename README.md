@@ -21,7 +21,7 @@ There is nothing more cringey than attending a local card shop for a tournament 
 
 One day I decided to write a basic web app, with the help of AI, as a passion project to help local card shops run their weekly tournaments. That's when TCG Timer was born!
 
-TCG Timer is made to run on a Ubuntu server with minimal services. You can either run it with dedicated hardware or run it in a virtual machine using the hypervisor of your choice. The viewer is made to run full-screen in a browser. The admin dashboard can be used in a separate tab or on a separate device on the network to control the viewer. Don't run a TCG tournament? No problem! The TCG Timer app is versatile and can be used in a variety of non-TCG related scenarios.
+TCG Timer is made to run on a Ubuntu server with minimal services. You can either run it with dedicated hardware or run it in a virtual machine using the hypervisor of your choice. The viewer is made to run full-screen in a browser or as a Roku app. The admin dashboard can be used in a separate tab or on a separate device on the network to control the viewer. Don't run a TCG tournament? No problem! The TCG Timer app is versatile and can be used in a variety of non-TCG related scenarios.
 
 Best of all? It's yours to use for FREE! I understand that profit margins are narrow on TCG products. This is my contribution to YOU for having to put up with crazy people during new product releases.
 
@@ -36,6 +36,8 @@ Best of all? It's yours to use for FREE! I understand that profit margins are na
 - Theme control
   - Light/Dark theme toggles (Admin dashboard only)
   - Basic theme options to update the viewer (v1.1)
+- Mobile compatibility
+- <a href="https://github.com/starg33kertcg/TCG_Timer_Roku">Roku app</a> (Viewer only, the server is still required for functionality)
 
 ## Screenshots
 Single Timer
@@ -48,6 +50,8 @@ Admin Dashboard (Light Theme)
 ![image](https://github.com/user-attachments/assets/124b48bf-7460-48f4-8684-7fb43a46cd8f)
 Admin Dashboard (Dark Theme)
 ![image](https://github.com/user-attachments/assets/d90bc386-1291-45a5-acb2-eccf4bf80c1e)
+Roku App Configuration
+![roku_timer3](https://github.com/user-attachments/assets/74c2016e-f2c1-40b0-bff9-2766aefc991d)
 
 ## Local Install Method (Debian/Ubuntu)
 <a name="local-install-method"></a>
@@ -102,5 +106,5 @@ Appreciating the app? Consider donating a booster pack or two via Venmo **@starg
 ***"Can I run this on Windows?"***
 <br>There is no Windows support at this time.
 
-***"Can I run the app in Docker?"***
+***"Can I run the server in Docker?"***
 <br>Yes! See the <a href="https://github.com/starg33kertcg/TCG_Timer_Docker/tree/main">Docker installation page</a>
