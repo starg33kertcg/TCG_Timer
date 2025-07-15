@@ -25,6 +25,8 @@ TCG Timer is made to run on a Ubuntu server with minimal services. You can eithe
 
 Best of all? It's yours to use for FREE! I understand that profit margins are narrow on TCG products. This is my contribution to YOU for having to put up with crazy people during new product releases.
 
+<a href="https://www.tcgtimer.com">tcgtimer.com</a>
+
 ## Features
 - Countdown timer that can be remotely controlled
   - Supports up two timers on one viewer
@@ -99,12 +101,12 @@ The file size of the logo you tried to upload is too large. The file size maximu
 Have questions? Submit your inquiries to starg33kertcg@gmail.com
 
 ## Donate
-Appreciating the app? Consider donating a booster pack or two via Venmo **@starg33ker** to feed my addiction...err..I mean hobby. (don't tell my wife I said that)
+Appreciating the app? Consider donating a booster pack or two via Venmo **@starg33ker** or <a href="https://www.paypal.com/donate/?hosted_button_id=THKLW8ZBNMMEC">PayPal</a> to feed my addiction...err..I mean hobby. (don't tell my wife I said that)
 
 ## FAQs
 <a name="FAQs"></a>
 ***"Can I run this on Windows?"***
-<br>There is no Windows support at this time.
+<br>Yes! You can download the .exe file on our website <a href="https://www.tcgtimer.com">tcgtimer.com</a>
 
 ***"Can I run the server in Docker?"***
 <br>Yes! See the <a href="https://github.com/starg33kertcg/TCG_Timer_Docker/tree/main">Docker installation page</a>
