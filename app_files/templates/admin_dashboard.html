@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>TCG Timer Admin</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 </head>
 <body class="admin-dashboard-body">
@@ -17,6 +17,7 @@
     </header>
 
     <main>
+        <!-- Timer Controls Section -->
         {% for timer_id, timer_details in timers_status.items() %}
         <section class="timer-control-section" id="timer-{{ timer_id }}-section">
             <h2>{{ timer_details.label }}
@@ -47,11 +48,53 @@
                     <option value="{{ logo.filename }}" {% if timer_details.logo_filename == logo.filename %}selected{% endif %}>{{ logo.name }}</option>
                     {% endfor %}
                 </select>
-                <button class="remove-logo" data-timer-id="{{ timer_id }}" style="margin-left: 5px;">Clear Logo</button>
+                 <button class="remove-logo" data-timer-id="{{ timer_id }}" style="margin-left: 5px;">Clear Logo</button>
             </div>
         </section>
         {% endfor %}
+        
+        <!-- Background Management Section -->
+        <section class="background-management">
+            <h2>Full Background Image</h2>
+            <p>Current: <span id="current-bg-name">{{ config.custom_background_filename or 'None' }}</span></p>
+            <form id="upload-background-form" class="upload-form">
+                <label for="background-file">Upload JPG, PNG, GIF:</label>
+                <input type="file" id="background-file" name="background_file" accept="image/png, image/jpeg, image/gif" required>
+                <button type="submit">Upload & Set Background</button>
+            </form>
+            <button id="delete-background-btn" class="delete-btn" {% if not config.custom_background_filename %}style="display: none;"{% endif %}>Delete Background</button>
+        </section>
 
+        <!-- Sound Management Section -->
+        <section class="sound-management">
+            <h2>Sound Effects</h2>
+            
+            <!-- Times Up Sound -->
+            <div class="sound-control-group">
+                <h3>Times Up Sound</h3>
+                <p>Current: <span id="current-times-up-sound">{{ config.times_up_sound_filename or 'Default Tone' }}</span></p>
+                <form id="upload-times-up-sound-form" class="upload-form" data-sound-type="times_up">
+                    <label for="times-up-sound-file">Upload MP3, WAV, OGG:</label>
+                    <input type="file" id="times-up-sound-file" name="sound_file" accept="audio/mp3, audio/wav, audio/ogg" required>
+                    <button type="submit">Upload & Set</button>
+                </form>
+                <button id="delete-times-up-sound-btn" class="delete-btn" data-sound-type="times_up" {% if not config.times_up_sound_filename %}style="display: none;"{% endif %}>Delete Custom Sound</button>
+            </div>
+
+            <!-- Low Time Sound -->
+            <div class="sound-control-group">
+                <h3>Low Time Sound</h3>
+                <p>Current: <span id="current-low-time-sound">{{ config.low_time_sound_filename or 'Default Tone' }}</span></p>
+                <form id="upload-low-time-sound-form" class="upload-form" data-sound-type="low_time">
+                    <label for="low-time-sound-file">Upload MP3, WAV, OGG:</label>
+                    <input type="file" id="low-time-sound-file" name="sound_file" accept="audio/mp3, audio/wav, audio/ogg" required>
+                    <button type="submit">Upload & Set</button>
+                </form>
+                <button id="delete-low-time-sound-btn" class="delete-btn" data-sound-type="low_time" {% if not config.low_time_sound_filename %}style="display: none;"{% endif %}>Delete Custom Sound</button>
+            </div>
+        </section>
+        
+        <!-- Logo Management Section -->
         <section class="logo-management">
             <h2>Logo Management</h2>
             <form id="upload-logo-form">
@@ -68,6 +111,8 @@
                 {% endfor %}
             </ul>
         </section>
+
+        <!-- Theme Management Section -->
         <section class="theme-management">
             <h2>Viewer Theme Settings</h2>
             <form id="theme-settings-form">
