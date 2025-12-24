@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
             };
         } catch (error) {
             console.error(`Network or API call failed (${endpoint}):`, error);
+            // Changed alert to custom modal/message box style for consistency in a desktop app, but using alert here since we don't have the modal implementation details.
             alert(`Network error or API call failed for ${endpoint}. See console for details.`);
             return null;
         }
@@ -317,6 +318,99 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
+    // ----------------------------------------------------------------------
+    // --- NEW FEATURE LOGIC: BACKGROUND AND SOUNDS ---
+    // ----------------------------------------------------------------------
+
+    // --- Background Upload and Delete ---
+    const uploadBgForm = document.getElementById('upload-background-form');
+    const currentBgName = document.getElementById('current-bg-name');
+    const deleteBgBtn = document.getElementById('delete-background-btn');
+
+    if (uploadBgForm) {
+        uploadBgForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch('/api/upload_background', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(data.message);
+                    currentBgName.textContent = data.filename;
+                    if (deleteBgBtn) deleteBgBtn.style.display = 'inline-block';
+                    this.reset();
+                } else {
+                    alert(`Background Upload Failed: ${data.error || 'Unknown error.'}`);
+                }
+            } catch (error) {
+                console.error('Background upload failed:', error);
+                alert('Background upload failed. See console.');
+            }
+        });
+    }
+
+    if (deleteBgBtn) {
+        deleteBgBtn.addEventListener('click', async function() {
+            if (confirm('Are you sure you want to delete the custom background image? The background will revert to the theme color.')) {
+                const result = await callApi('/api/delete_background', 'DELETE');
+                if (result && result.ok) {
+                    alert(result.data.message);
+                    if (currentBgName) currentBgName.textContent = 'None';
+                    this.style.display = 'none';
+                } else {
+                     alert(`Failed to delete background: ${result.data ? result.data.error : 'Unknown error.'}`);
+                }
+            }
+        });
+    }
+
+
+    // --- Sound Upload and Delete ---
+    async function handleSoundUpload(e) {
+        e.preventDefault();
+        const soundType = this.getAttribute('data-sound-type');
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch(`/api/upload_sound/${soundType}`, { method: 'POST', body: formData });
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.message);
+                document.getElementById(`current-${soundType}-sound`).textContent = data.filename;
+                document.getElementById(`delete-${soundType}-sound-btn`).style.display = 'inline-block';
+                this.reset();
+            } else {
+                alert(`${soundType.replace('_', ' ').toUpperCase()} Upload Failed: ${data.error || 'Unknown error.'}`);
+            }
+        } catch (error) {
+            console.error('Sound upload failed:', error);
+            alert('Sound upload failed. See console.');
+        }
+    }
+
+    async function handleSoundDelete(e) {
+        const soundType = this.getAttribute('data-sound-type');
+        if (confirm(`Are you sure you want to delete the custom ${soundType.replace('_', ' ')} sound? It will revert to the default tone.`)) {
+            const result = await callApi(`/api/delete_sound/${soundType}`, 'DELETE');
+            if (result && result.ok) {
+                alert(result.data.message);
+                document.getElementById(`current-${soundType}-sound`).textContent = 'Default Tone';
+                document.getElementById(`delete-${soundType}-sound-btn`).style.display = 'none';
+            } else {
+                 alert(`Failed to delete sound: ${result.data ? result.data.error : 'Unknown error.'}`);
+            }
+        }
+    }
+
+    document.getElementById('upload-times-up-sound-form')?.addEventListener('submit', handleSoundUpload);
+    document.getElementById('upload-low-time-sound-form')?.addEventListener('submit', handleSoundUpload);
+    document.getElementById('delete-times-up-sound-btn')?.addEventListener('click', handleSoundDelete);
+    document.getElementById('delete-low-time-sound-btn')?.addEventListener('click', handleSoundDelete);
+
+
     // Initial Loads and Polling
     loadLogos();
     fetchAndUpdateAdminTimerDisplays(); 
