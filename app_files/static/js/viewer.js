@@ -1,147 +1,164 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const timerElements = {
-        '1': {
-            wrapper: document.getElementById('timer-1-wrapper'),
-            textEl: document.getElementById('timer-1-text'),
-            logoEl: document.getElementById('timer-1-logo'),
-            visible: false
-        },
-        '2': {
-            wrapper: document.getElementById('timer-2-wrapper'),
-            textEl: document.getElementById('timer-2-text'),
-            logoEl: document.getElementById('timer-2-logo'),
-            visible: false
-        }
+    const APP_CONTAINER = document.getElementById('app-container');
+    const TIMER_CONTAINERS = {
+        '1': document.getElementById('timer-1-container'),
+        '2': document.getElementById('timer-2-container')
     };
+    const TIMER_VALUES = {
+        '1': document.getElementById('timer-1-value'),
+        '2': document.getElementById('timer-2-value')
+    };
+    const TIMER_LOGOS = {
+        '1': document.getElementById('timer-1-logo'),
+        '2': document.getElementById('timer-2-logo')
+    };
+    const TIMER_STATUS = { '1': { times_up: false, low_time: false }, '2': { times_up: false, low_time: false } };
+    
+    // --- Audio State & Defaults ---
+    let TIMES_UP_SOUND_URL = null;
+    let LOW_TIME_SOUND_URL = null;
+    let AUDIO_CONTEXT_INITIALIZED = false;
 
-    let currentTheme = { // Object to hold the latest theme settings
-        low_time_minutes: 5,
-        warning_enabled: true
-    }; 
+    // Default Tone.js synthesizers for built-in sounds
+    const TimesUpSynth = new Tone.MembraneSynth().toDestination();
+    const LowTimeSynth = new Tone.PolySynth(Tone.Synth).toDestination();
 
-    function formatTime(totalSeconds) {
-        if (totalSeconds < 0) totalSeconds = 0;
-        const h = Math.floor(totalSeconds / 3600);
-        const m = Math.floor((totalSeconds % 3600) / 60);
-        const s = totalSeconds % 60;
+    // Custom sound player, initialized only when needed
+    let customPlayer = null; 
 
-        if (h === 0) {
-            return `${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
-        } else {
-            return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}m${String(s).padStart(2, '0')}s`;
+    function initializeAudio() {
+        if (!AUDIO_CONTEXT_INITIALIZED && Tone.context.state !== 'running') {
+            document.body.addEventListener('click', () => {
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                    AUDIO_CONTEXT_INITIALIZED = true;
+                    console.log('Audio Context started.');
+                }
+            }, { once: true });
         }
     }
 
-    function updateTimerDisplay(timerId, data) {
-        const elements = timerElements[timerId];
-        if (!elements) return;
+    function playSound(type) {
+        initializeAudio();
+        const soundUrl = type === 'times_up' ? TIMES_UP_SOUND_URL : LOW_TIME_SOUND_URL;
 
-        if (data.enabled) {
-            elements.wrapper.style.display = 'flex';
-            elements.visible = true;
-
-            const displayTimeSeconds = data.time_remaining_seconds;
-
-            if (data.times_up) {
-                elements.textEl.textContent = 'TIMES UP';
-                elements.textEl.classList.add('times-up');
-                elements.textEl.classList.remove('low-time-warning', 'timer-text-mm-ss');
-            } else {
-                elements.textEl.textContent = formatTime(displayTimeSeconds);
-                elements.textEl.classList.remove('times-up');
-
-                // Add/remove class for MMmSSs font size formatting
-                const hoursRemaining = Math.floor(displayTimeSeconds / 3600);
-                if (hoursRemaining === 0) {
-                    elements.textEl.classList.add('timer-text-mm-ss');
-                } else {
-                    elements.textEl.classList.remove('timer-text-mm-ss');
-                }
-
-                // Apply low time warning based on theme settings
-                const lowTimeSeconds = (currentTheme.low_time_minutes || 5) * 60;
-                const warningEnabled = currentTheme.warning_enabled !== false;
-                
-                if (warningEnabled && displayTimeSeconds > 0 && displayTimeSeconds < lowTimeSeconds && data.is_running) {
-                    elements.textEl.classList.add('low-time-warning');
-                } else {
-                    elements.textEl.classList.remove('low-time-warning');
-                }
-            }
-
-            if (data.logo_filename && data.logo_filename !== "None") {
-                elements.logoEl.src = `/static/uploads/${data.logo_filename}`;
-                elements.logoEl.style.display = 'block';
-            } else {
-                elements.logoEl.style.display = 'none';
-            }
-        } else {
-            elements.wrapper.style.display = 'none';
-            elements.visible = false;
+        if (soundUrl && customPlayer) {
+            // Use custom uploaded sound
+            customPlayer.load(soundUrl).then(() => {
+                customPlayer.start();
+            }).catch(e => console.error(`Error playing custom ${type} sound:`, e));
+        } else if (type === 'times_up') {
+            // Default "Times Up" tone (low, deep thud)
+            TimesUpSynth.triggerAttackRelease("C1", "1n");
+        } else if (type === 'low_time') {
+            // Default "Low Time" tone (short, high beep)
+            LowTimeSynth.triggerAttackRelease(["C5"], "8n");
         }
     }
     
-    // New function to apply the theme from fetched data
-    function applyTheme(theme) {
-        if (!theme) return;
-        currentTheme = theme; // Store for use in updateTimerDisplay
-        document.body.style.backgroundColor = theme.background || '#000000';
-        document.body.style.color = theme.font_color || '#FFFFFF';
-    }
+    // --- Core Polling Logic ---
 
-    function adjustLayout() {
-        const visibleTimers = Object.values(timerElements).filter(t => t.visible).length;
+    function updateViewer(data) {
+        const theme = data.theme || {};
+        const lowTimeSeconds = (theme.low_time_minutes || 5) * 60;
         
-        Object.values(timerElements).forEach(timer => {
-            timer.wrapper.classList.remove('single-active', 'dual-active');
-        });
-
-        if (visibleTimers === 1) {
-            Object.values(timerElements).forEach(timer => {
-                if (timer.visible) {
-                    timer.wrapper.classList.add('single-active');
-                }
-            });
-        } else if (visibleTimers === 2) {
-             Object.values(timerElements).forEach(timer => {
-                if (timer.visible) {
-                    timer.wrapper.classList.add('dual-active');
-                }
-            });
+        // 1. Apply Theme and Background
+        APP_CONTAINER.style.backgroundColor = theme.background || '#000000';
+        APP_CONTAINER.style.color = theme.font_color || '#FFFFFF';
+        
+        if (data.background_filename) {
+             APP_CONTAINER.style.backgroundImage = `url(/static/backgrounds/${data.background_filename})`;
+             APP_CONTAINER.style.backgroundSize = 'cover';
+             APP_CONTAINER.style.backgroundPosition = 'center';
+             APP_CONTAINER.style.backgroundAttachment = 'fixed';
+        } else {
+             APP_CONTAINER.style.backgroundImage = 'none';
         }
-    }
 
-    // Main polling function, now handles new API response structure
-    async function fetchTimerStates() {
-        try {
-            const response = await fetch('/api/timer_status');
-            if (!response.ok) {
-                console.error('Failed to fetch timer status:', response.status, await response.text());
-                return;
+        // 2. Configure Custom Audio URLs
+        // If a custom sound is set, configure the player
+        if (data.times_up_sound || data.low_time_sound) {
+            if (!customPlayer) {
+                 customPlayer = new Tone.Player().toDestination();
             }
-            const data = await response.json();
+            TIMES_UP_SOUND_URL = data.times_up_sound ? `/static/audio/${data.times_up_sound}` : null;
+            LOW_TIME_SOUND_URL = data.low_time_sound ? `/static/audio/${data.low_time_sound}` : null;
+        } else {
+            TIMES_UP_SOUND_URL = null;
+            LOW_TIME_SOUND_URL = null;
+        }
+
+
+        // 3. Update Timers, Logos, and Sounds
+        Object.keys(data.timers).forEach(timerId => {
+            const timer = data.timers[timerId];
+            const container = TIMER_CONTAINERS[timerId];
+            const valueDisplay = TIMER_VALUES[timerId];
+
+            // Hide/Show Container
+            container.style.display = timer.enabled ? 'flex' : 'none';
+            if (!timer.enabled) return;
+
+            // Times Up Status
+            if (timer.times_up && !TIMER_STATUS[timerId].times_up) {
+                // TIMES UP TRIGGER
+                if (theme.warning_enabled !== false) {
+                     playSound('times_up');
+                }
+                valueDisplay.classList.add('times-up');
+            } else if (!timer.times_up && TIMER_STATUS[timerId].times_up) {
+                valueDisplay.classList.remove('times-up');
+            }
+            TIMER_STATUS[timerId].times_up = timer.times_up;
             
-            // Apply theme from the API response first
-            if (data.theme) {
-                applyTheme(data.theme);
-            }
-
-            // Update timers using the 'timers' sub-object
-            const timersData = data.timers || {};
-            for (const timerId in timerElements) {
-                if (timersData.hasOwnProperty(timerId)) {
-                    updateTimerDisplay(timerId, timersData[timerId]);
-                } else {
-                    // If a timer is missing from response, treat it as disabled
-                    updateTimerDisplay(timerId, { enabled: false });
+            // Low Time Status
+            const isLowTime = !timer.times_up && timer.is_running && timer.time_remaining_seconds <= lowTimeSeconds;
+            if (isLowTime && !TIMER_STATUS[timerId].low_time) {
+                // LOW TIME TRIGGER
+                if (theme.warning_enabled !== false) {
+                    playSound('low_time');
                 }
+                valueDisplay.classList.add('low-time');
+            } else if (!isLowTime && TIMER_STATUS[timerId].low_time) {
+                valueDisplay.classList.remove('low-time');
             }
-            adjustLayout();
-        } catch (error) {
-            console.error('Error fetching timer states:', error);
-        }
+            TIMER_STATUS[timerId].low_time = isLowTime;
+
+            // Timer Value Display
+            const totalSeconds = timer.time_remaining_seconds;
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            valueDisplay.textContent = 
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            // Logo Display
+            const logoElement = TIMER_LOGOS[timerId];
+            if (timer.logo_filename) {
+                logoElement.src = `/static/uploads/${timer.logo_filename}`;
+                logoElement.style.display = 'block';
+            } else {
+                logoElement.style.display = 'none';
+            }
+            
+            // Running State (Visual Flashing)
+            container.classList.toggle('running', timer.is_running);
+            container.classList.toggle('paused', !timer.is_running && !timer.times_up && timer.enabled);
+        });
     }
 
-    fetchTimerStates(); 
-    setInterval(fetchTimerStates, 1000); 
+    function pollAPI() {
+        fetch('/api/timer_status')
+            .then(r => r.json())
+            .then(updateViewer)
+            .catch(error => console.error('Error fetching timer status:', error));
+    }
+
+    // Start polling immediately and then every 100 milliseconds for smooth updates
+    pollAPI();
+    setInterval(pollAPI, 100); 
+    
+    // Initial call to ensure audio context can start on first click/interaction
+    initializeAudio();
 });
