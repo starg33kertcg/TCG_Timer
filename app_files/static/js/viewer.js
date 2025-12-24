@@ -1,12 +1,14 @@
 document.addEventListener('DOMContentLoaded', function () {
     const APP_CONTAINER = document.getElementById('app-container');
     const TIMER_CONTAINERS = {
-        '1': document.getElementById('timer-1-container'),
-        '2': document.getElementById('timer-2-container')
+        // Renamed from '-container' to '-wrapper'
+        '1': document.getElementById('timer-1-wrapper'),
+        '2': document.getElementById('timer-2-wrapper')
     };
     const TIMER_VALUES = {
-        '1': document.getElementById('timer-1-value'),
-        '2': document.getElementById('timer-2-value')
+        // Renamed from '-value' to '-text'
+        '1': document.getElementById('timer-1-text'),
+        '2': document.getElementById('timer-2-text')
     };
     const TIMER_LOGOS = {
         '1': document.getElementById('timer-1-logo'),
@@ -44,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (soundUrl && customPlayer) {
             // Use custom uploaded sound
+            // We load the sound data into the player once it's available and then start
             customPlayer.load(soundUrl).then(() => {
                 customPlayer.start();
             }).catch(e => console.error(`Error playing custom ${type} sound:`, e));
@@ -63,16 +66,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const lowTimeSeconds = (theme.low_time_minutes || 5) * 60;
         
         // 1. Apply Theme and Background
-        APP_CONTAINER.style.backgroundColor = theme.background || '#000000';
-        APP_CONTAINER.style.color = theme.font_color || '#FFFFFF';
+        document.body.style.backgroundColor = theme.background || '#000000';
+        document.body.style.color = theme.font_color || '#FFFFFF'; // Apply color to body so timers inherit it
         
         if (data.background_filename) {
-             APP_CONTAINER.style.backgroundImage = `url(/static/backgrounds/${data.background_filename})`;
-             APP_CONTAINER.style.backgroundSize = 'cover';
-             APP_CONTAINER.style.backgroundPosition = 'center';
-             APP_CONTAINER.style.backgroundAttachment = 'fixed';
+             document.body.style.backgroundImage = `url(/static/backgrounds/${data.background_filename})`;
+             document.body.style.backgroundSize = 'cover';
+             document.body.style.backgroundPosition = 'center';
+             document.body.style.backgroundAttachment = 'fixed';
         } else {
-             APP_CONTAINER.style.backgroundImage = 'none';
+             document.body.style.backgroundImage = 'none';
         }
 
         // 2. Configure Custom Audio URLs
@@ -80,12 +83,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (data.times_up_sound || data.low_time_sound) {
             if (!customPlayer) {
                  customPlayer = new Tone.Player().toDestination();
+                 // Set loop to false and playbackRate to 1 (default)
+                 customPlayer.loop = false; 
             }
             TIMES_UP_SOUND_URL = data.times_up_sound ? `/static/audio/${data.times_up_sound}` : null;
             LOW_TIME_SOUND_URL = data.low_time_sound ? `/static/audio/${data.low_time_sound}` : null;
         } else {
             TIMES_UP_SOUND_URL = null;
             LOW_TIME_SOUND_URL = null;
+            if (customPlayer) {
+                // If custom sounds are removed, stop the player if it's running
+                customPlayer.stop();
+            }
         }
 
 
@@ -106,12 +115,15 @@ document.addEventListener('DOMContentLoaded', function () {
                      playSound('times_up');
                 }
                 valueDisplay.classList.add('times-up');
+                // Ensure low-time is removed if times-up is active
+                valueDisplay.classList.remove('low-time'); 
             } else if (!timer.times_up && TIMER_STATUS[timerId].times_up) {
                 valueDisplay.classList.remove('times-up');
             }
             TIMER_STATUS[timerId].times_up = timer.times_up;
             
             // Low Time Status
+            // Check for running state to prevent warning while paused
             const isLowTime = !timer.times_up && timer.is_running && timer.time_remaining_seconds <= lowTimeSeconds;
             if (isLowTime && !TIMER_STATUS[timerId].low_time) {
                 // LOW TIME TRIGGER
@@ -130,8 +142,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = totalSeconds % 60;
             
-            valueDisplay.textContent = 
-                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            let timeString;
+            if (hours > 0) {
+                timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                valueDisplay.classList.remove('timer-text-mm-ss'); // Assume old HTML used this class for size change
+            } else {
+                timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                valueDisplay.classList.add('timer-text-mm-ss'); // Apply MM:SS class
+            }
+            valueDisplay.textContent = timeString;
             
             // Logo Display
             const logoElement = TIMER_LOGOS[timerId];
@@ -143,10 +162,37 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             
             // Running State (Visual Flashing)
+            // Note: Classes 'running' and 'paused' depend on your CSS
             container.classList.toggle('running', timer.is_running);
             container.classList.toggle('paused', !timer.is_running && !timer.times_up && timer.enabled);
         });
+        
+        // --- Added Layout Adjustment Logic ---
+        adjustLayout();
     }
+    
+    function adjustLayout() {
+        let visibleTimers = 0;
+        Object.values(TIMER_CONTAINERS).forEach(container => {
+            if (container && container.style.display !== 'none') {
+                visibleTimers++;
+            }
+        });
+
+        Object.values(TIMER_CONTAINERS).forEach(container => {
+            if (!container) return;
+            container.classList.remove('single-active', 'dual-active');
+            if (container.style.display !== 'none') {
+                 if (visibleTimers === 1) {
+                    container.classList.add('single-active');
+                } else if (visibleTimers === 2) {
+                    container.classList.add('dual-active');
+                }
+            }
+        });
+        
+    }
+
 
     function pollAPI() {
         fetch('/api/timer_status')
