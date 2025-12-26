@@ -33,13 +33,12 @@ document.addEventListener('DOMContentLoaded', function () {
             };
         } catch (error) {
             console.error(`Network or API call failed (${endpoint}):`, error);
-            // Changed alert to custom modal/message box style for consistency in a desktop app, but using alert here since we don't have the modal implementation details.
             alert(`Network error or API call failed for ${endpoint}. See console for details.`);
             return null;
         }
     }
 
-    // --- Modal Logic (Change PIN & Future Modals) ---
+    // --- Modal Logic ---
     function setupModal(modalId, openBtnId, closeBtnSelector) {
         const modal = document.getElementById(modalId);
         const openBtn = document.getElementById(openBtnId);
@@ -106,6 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (themeForm) {
         const bgColorInput = document.getElementById('background-color');
         const fontColorInput = document.getElementById('font-color');
+        const lowTimeColorInput = document.getElementById('low-time-color'); // NEW
         const lowTimeInput = document.getElementById('low-time-minutes');
         const warningEnableInput = document.getElementById('low-time-warning-enable');
 
@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const themeData = response.data;
                 bgColorInput.value = themeData.background || '#000000';
                 fontColorInput.value = themeData.font_color || '#FFFFFF';
+                if(lowTimeColorInput) lowTimeColorInput.value = themeData.low_time_color || '#FF0000'; // Load new color
                 lowTimeInput.value = themeData.low_time_minutes || 5;
                 warningEnableInput.checked = themeData.warning_enabled !== false;
             }
@@ -126,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const newTheme = {
                 background: bgColorInput.value,
                 font_color: fontColorInput.value,
+                low_time_color: lowTimeColorInput.value, // Save new color
                 low_time_minutes: parseInt(lowTimeInput.value, 10),
                 warning_enabled: warningEnableInput.checked
             };
@@ -274,6 +276,75 @@ document.addEventListener('DOMContentLoaded', function () {
             fetchAndUpdateAdminTimerDisplays();
         }
     }
+    
+    // Generic Helper for new uploads
+    async function handleNewUpload(url, formData) {
+        try {
+            const res = await fetch(url, { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) return { success: true, data };
+            return { success: false, error: data.error };
+        } catch (e) { return { success: false, error: e.toString() }; }
+    }
+
+    // Background Upload
+    const bgForm = document.getElementById('upload-background-form');
+    if (bgForm) {
+        bgForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const res = await handleNewUpload('/api/upload_background', new FormData(this));
+            if (res.success) { 
+                alert(res.data.message); 
+                document.getElementById('current-bg-name').textContent = res.data.filename; 
+                document.getElementById('delete-background-btn').style.display = 'inline-block'; 
+                this.reset(); 
+            } else {
+                alert("Error: " + res.error);
+            }
+        });
+    }
+
+    // Sound Uploads
+    document.querySelectorAll('.upload-form').forEach(form => {
+        if(form.id === 'upload-background-form') return; // Skip bg form
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const type = this.getAttribute('data-sound-type'); 
+            if (!type) return;
+            const res = await handleNewUpload(`/api/upload_sound/${type}`, new FormData(this));
+            if (res.success) { 
+                alert(res.data.message); 
+                document.getElementById(`current-${type}-sound`).textContent = res.data.filename; 
+                document.getElementById(`delete-${type}-sound-btn`).style.display = 'inline-block'; 
+                this.reset(); 
+            } else {
+                alert("Error: " + res.error);
+            }
+        });
+    });
+    
+    // Deletions (Background & Sounds)
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            let url = '';
+            const type = this.getAttribute('data-sound-type');
+            if (this.id === 'delete-background-btn') url = '/api/delete_background';
+            else if (type) url = `/api/delete_sound/${type}`;
+            else if (this.classList.contains('delete-logo-btn')) return; // Skip, handled elsewhere
+
+            if (url && confirm("Are you sure you want to delete this custom file?")) {
+                const res = await fetch(url, { method: 'DELETE' });
+                const data = await res.json();
+                if (res.ok) { 
+                    alert(data.message); 
+                    location.reload(); 
+                } else {
+                    alert("Error: " + data.error);
+                }
+            }
+        });
+    });
 
     // --- Main Data Fetching and UI Refresh ---
     function formatAdminTime(totalSeconds) {
@@ -318,99 +389,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
-    // ----------------------------------------------------------------------
-    // --- NEW FEATURE LOGIC: BACKGROUND AND SOUNDS ---
-    // ----------------------------------------------------------------------
-
-    // --- Background Upload and Delete ---
-    const uploadBgForm = document.getElementById('upload-background-form');
-    const currentBgName = document.getElementById('current-bg-name');
-    const deleteBgBtn = document.getElementById('delete-background-btn');
-
-    if (uploadBgForm) {
-        uploadBgForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            
-            try {
-                const response = await fetch('/api/upload_background', { method: 'POST', body: formData });
-                const data = await response.json();
-
-                if (response.ok) {
-                    alert(data.message);
-                    currentBgName.textContent = data.filename;
-                    if (deleteBgBtn) deleteBgBtn.style.display = 'inline-block';
-                    this.reset();
-                } else {
-                    alert(`Background Upload Failed: ${data.error || 'Unknown error.'}`);
-                }
-            } catch (error) {
-                console.error('Background upload failed:', error);
-                alert('Background upload failed. See console.');
-            }
-        });
-    }
-
-    if (deleteBgBtn) {
-        deleteBgBtn.addEventListener('click', async function() {
-            if (confirm('Are you sure you want to delete the custom background image? The background will revert to the theme color.')) {
-                const result = await callApi('/api/delete_background', 'DELETE');
-                if (result && result.ok) {
-                    alert(result.data.message);
-                    if (currentBgName) currentBgName.textContent = 'None';
-                    this.style.display = 'none';
-                } else {
-                     alert(`Failed to delete background: ${result.data ? result.data.error : 'Unknown error.'}`);
-                }
-            }
-        });
-    }
-
-
-    // --- Sound Upload and Delete ---
-    async function handleSoundUpload(e) {
-        e.preventDefault();
-        const soundType = this.getAttribute('data-sound-type');
-        const formData = new FormData(this);
-        
-        try {
-            const response = await fetch(`/api/upload_sound/${soundType}`, { method: 'POST', body: formData });
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(data.message);
-                document.getElementById(`current-${soundType}-sound`).textContent = data.filename;
-                document.getElementById(`delete-${soundType}-sound-btn`).style.display = 'inline-block';
-                this.reset();
-            } else {
-                alert(`${soundType.replace('_', ' ').toUpperCase()} Upload Failed: ${data.error || 'Unknown error.'}`);
-            }
-        } catch (error) {
-            console.error('Sound upload failed:', error);
-            alert('Sound upload failed. See console.');
-        }
-    }
-
-    async function handleSoundDelete(e) {
-        const soundType = this.getAttribute('data-sound-type');
-        if (confirm(`Are you sure you want to delete the custom ${soundType.replace('_', ' ')} sound? It will revert to the default tone.`)) {
-            const result = await callApi(`/api/delete_sound/${soundType}`, 'DELETE');
-            if (result && result.ok) {
-                alert(result.data.message);
-                document.getElementById(`current-${soundType}-sound`).textContent = 'Default Tone';
-                document.getElementById(`delete-${soundType}-sound-btn`).style.display = 'none';
-            } else {
-                 alert(`Failed to delete sound: ${result.data ? result.data.error : 'Unknown error.'}`);
-            }
-        }
-    }
-
-    document.getElementById('upload-times-up-sound-form')?.addEventListener('submit', handleSoundUpload);
-    document.getElementById('upload-low-time-sound-form')?.addEventListener('submit', handleSoundUpload);
-    document.getElementById('delete-times-up-sound-btn')?.addEventListener('click', handleSoundDelete);
-    document.getElementById('delete-low-time-sound-btn')?.addEventListener('click', handleSoundDelete);
-
-
     // Initial Loads and Polling
     loadLogos();
     fetchAndUpdateAdminTimerDisplays(); 
