@@ -105,7 +105,8 @@ fi
 # --- System Update and Dependency Installation ---
 print_info "Updating system packages and installing dependencies..."
 apt-get update -q || { print_error "apt-get update failed."; exit 1; }
-apt-get install -y -q nginx curl ufw $PYTHON_EXEC $PYTHON_EXEC-pip $PYTHON_EXEC-venv gunicorn || { print_error "Failed to install dependencies."; exit 1; }
+# Changed gunicorn to python3-waitress if available, but pip install is better for consistent versions
+apt-get install -y -q nginx curl ufw $PYTHON_EXEC $PYTHON_EXEC-pip $PYTHON_EXEC-venv || { print_error "Failed to install dependencies."; exit 1; }
 print_success "System dependencies installed."
 
 # --- Check for and Disable Conflicting Web Servers ---
@@ -198,28 +199,28 @@ find "$APP_INSTALL_DIR" -type f -exec chmod 644 {} \;
 chmod -R u+w "${APP_INSTALL_DIR}/static"
 chmod -R u+w "${APP_INSTALL_DIR}/config.json"
 chmod +x ${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/python
-chmod +x ${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/gunicorn
+# Removed incorrect chmod for gunicorn, using waitress via python
 print_success "Permissions set."
 
-# --- Setup Gunicorn Systemd Service ---
+# --- Setup Systemd Service (Using Waitress) ---
 SERVICE_NAME="${APP_NAME}.service"
-GUNICORN_SOCKET_FILE="${APP_INSTALL_DIR}/gunicorn.sock"
 
 print_info "Creating Systemd service: $SERVICE_NAME"
+# Note: ExecStart now uses the venv python to run app.py directly, which invokes waitress.serve()
 cat <<EOF > "/etc/systemd/system/${SERVICE_NAME}"
 [Unit]
-Description=Gunicorn instance for the ${APP_NAME} 
+Description=Waitress instance for the ${APP_NAME} 
 After=network.target
 
 [Service]
 User=${APP_USER}
 WorkingDirectory=${APP_INSTALL_DIR}
 Environment="PATH=${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin"
-ExecStart=${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/gunicorn --workers 1 --bind unix:${GUNICORN_SOCKET_FILE} -m 007 app:app
+ExecStart=${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/python app.py
 Restart=always
 RestartSec=5s
-StandardOutput=append:/var/log/${APP_NAME}_gunicorn_out.log
-StandardError=append:/var/log/${APP_NAME}_gunicorn_err.log
+StandardOutput=append:/var/log/${APP_NAME}_out.log
+StandardError=append:/var/log/${APP_NAME}_err.log
 
 [Install]
 WantedBy=multi-user.target
@@ -245,7 +246,7 @@ server {
     server_name _; 
 
     # INCREASED UPLOAD SIZE LIMIT
-    client_max_body_size 10M;
+    client_max_body_size 20M;
 
     access_log /var/log/nginx/${APP_NAME}_access.log;
     error_log /var/log/nginx/${APP_NAME}_error.log;
@@ -257,7 +258,8 @@ server {
     }
 
     location / {
-        proxy_pass http://unix:${GUNICORN_SOCKET_FILE};
+        # Proxy to Waitress on port 5000 (default in app.py)
+        proxy_pass http://127.0.0.1:5000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -271,7 +273,12 @@ if [ ! -L "/etc/nginx/sites-enabled/${NGINX_CONF_NAME}" ]; then
     ln -s "/etc/nginx/sites-available/${NGINX_CONF_NAME}" "/etc/nginx/sites-enabled/"
 fi
 
-systemctl reload nginx || systemctl restart nginx
+# Reload Nginx securely
+if systemctl is-active --quiet nginx; then
+    systemctl reload nginx
+else
+    systemctl start nginx
+fi
 print_success "Nginx configured."
 
 # --- Firewall ---
