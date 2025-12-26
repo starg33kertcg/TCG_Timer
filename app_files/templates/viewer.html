@@ -8,17 +8,17 @@
     <script src="https://cdn.jsdelivr.net/npm/tone@14.9.14/build/Tone.min.js"></script>
 </head>
 <body>
-    <div id="app-container">
-        <!-- Timer 1 -->
-        <div class="timer-display-container" id="timer-1-container">
-            <img class="timer-logo" id="timer-1-logo" style="display: none;">
-            <div class="timer-value" id="timer-1-value">00:00:00</div>
+    <div class="timer-container" id="app-container">
+        <!-- Timer 1 Wrapper -->
+        <div id="timer-1-wrapper" class="timer-wrapper" style="display:none;">
+            <img id="timer-1-logo" class="logo-img" src="#" alt="Timer 1 Logo" style="display:none;">
+            <div id="timer-1-text" class="timer-text">00:00:00</div>
         </div>
-
-        <!-- Timer 2 -->
-        <div class="timer-display-container" id="timer-2-container">
-            <img class="timer-logo" id="timer-2-logo" style="display: none;">
-            <div class="timer-value" id="timer-2-value">00:00:00</div>
+        
+        <!-- Timer 2 Wrapper -->
+        <div id="timer-2-wrapper" class="timer-wrapper" style="display:none;">
+            <img id="timer-2-logo" class="logo-img" src="#" alt="Timer 2 Logo" style="display:none;">
+            <div id="timer-2-text" class="timer-text">00:00:00</div>
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/viewer.js') }}"></script>
