@@ -26,11 +26,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         try {
             const response = await fetch(endpoint, options);
-            return {
-                ok: response.ok,
-                status: response.status,
-                data: await response.json().catch(() => null)
-            };
+            // Check content type before parsing
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                return { ok: response.ok, status: response.status, data: await response.json() };
+            } else {
+                // If not JSON, return text for debugging (likely HTML error page)
+                const text = await response.text();
+                console.error(`API ${endpoint} returned non-JSON:`, text);
+                return { ok: false, status: response.status, error: "Server returned non-JSON response (check console)" };
+            }
         } catch (error) {
             console.error(`Network or API call failed (${endpoint}):`, error);
             alert(`Network error or API call failed for ${endpoint}. See console for details.`);
@@ -38,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- Modal Logic ---
+    // --- Modal Logic (Change PIN & Future Modals) ---
     function setupModal(modalId, openBtnId, closeBtnSelector) {
         const modal = document.getElementById(modalId);
         const openBtn = document.getElementById(openBtnId);
@@ -94,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pinStatusMsg.style.color = 'green';
                 setTimeout(() => { document.getElementById('change-pin-modal').style.display = 'none'; }, 2000);
             } else {
-                pinStatusMsg.textContent = `Error: ${result.data.error || 'An unknown error occurred.'}`;
+                pinStatusMsg.textContent = `Error: ${result.data ? result.data.error : result.error}`;
                 pinStatusMsg.style.color = 'red';
             }
         });
@@ -105,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (themeForm) {
         const bgColorInput = document.getElementById('background-color');
         const fontColorInput = document.getElementById('font-color');
-        const lowTimeColorInput = document.getElementById('low-time-color'); // NEW
+        const lowTimeColorInput = document.getElementById('low-time-color');
         const lowTimeInput = document.getElementById('low-time-minutes');
         const warningEnableInput = document.getElementById('low-time-warning-enable');
 
@@ -113,11 +118,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const response = await callApi('/api/theme');
             if (response && response.ok && response.data) {
                 const themeData = response.data;
-                bgColorInput.value = themeData.background || '#000000';
-                fontColorInput.value = themeData.font_color || '#FFFFFF';
-                if(lowTimeColorInput) lowTimeColorInput.value = themeData.low_time_color || '#FF0000'; // Load new color
-                lowTimeInput.value = themeData.low_time_minutes || 5;
-                warningEnableInput.checked = themeData.warning_enabled !== false;
+                if(bgColorInput) bgColorInput.value = themeData.background || '#000000';
+                if(fontColorInput) fontColorInput.value = themeData.font_color || '#FFFFFF';
+                if(lowTimeColorInput) lowTimeColorInput.value = themeData.low_time_color || '#FF0000';
+                if(lowTimeInput) lowTimeInput.value = themeData.low_time_minutes || 5;
+                if(warningEnableInput) warningEnableInput.checked = themeData.warning_enabled !== false;
             }
         }
         loadCurrentTheme();
@@ -125,11 +130,11 @@ document.addEventListener('DOMContentLoaded', function () {
         themeForm.addEventListener('submit', async function(event) {
             event.preventDefault();
             const newTheme = {
-                background: bgColorInput.value,
-                font_color: fontColorInput.value,
-                low_time_color: lowTimeColorInput.value, // Save new color
-                low_time_minutes: parseInt(lowTimeInput.value, 10),
-                warning_enabled: warningEnableInput.checked
+                background: bgColorInput ? bgColorInput.value : '#000000',
+                font_color: fontColorInput ? fontColorInput.value : '#FFFFFF',
+                low_time_color: lowTimeColorInput ? lowTimeColorInput.value : '#FF0000',
+                low_time_minutes: lowTimeInput ? parseInt(lowTimeInput.value, 10) : 5,
+                warning_enabled: warningEnableInput ? warningEnableInput.checked : true
             };
             const result = await callApi('/api/theme', 'POST', newTheme);
             if (result && result.ok) {
@@ -161,11 +166,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         if (setTimeBtn) {
             setTimeBtn.addEventListener('click', async () => {
+                const hInput = section.querySelector(`#hours-${timerId}`);
+                const mInput = section.querySelector(`#minutes-${timerId}`);
+                const sInput = section.querySelector(`#seconds-${timerId}`);
                 const payload = { 
                     action: 'set_time',
-                    hours: parseInt(section.querySelector(`#hours-${timerId}`).value) || 0,
-                    minutes: parseInt(section.querySelector(`#minutes-${timerId}`).value) || 0,
-                    seconds: parseInt(section.querySelector(`#seconds-${timerId}`).value) || 0
+                    hours: hInput ? (parseInt(hInput.value) || 0) : 0,
+                    minutes: mInput ? (parseInt(mInput.value) || 0) : 0,
+                    seconds: sInput ? (parseInt(sInput.value) || 0) : 0
                 };
                 await callApi(`/api/control_timer/${timerId}`, 'POST', payload);
                 fetchAndUpdateAdminTimerDisplays();
@@ -210,13 +218,21 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(this);
             try {
                 const response = await fetch('/api/upload_logo', { method: 'POST', body: formData });
-                const result = await response.json();
-                if (response.ok) {
-                    alert(result.message || 'Logo uploaded!');
-                    this.reset();
-                    loadLogos(); 
+                const contentType = response.headers.get("content-type");
+                
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert(result.message || 'Logo uploaded!');
+                        this.reset();
+                        loadLogos(); 
+                    } else {
+                        alert(`Error: ${result.error || 'Upload failed'}`);
+                    }
                 } else {
-                    alert(`Error: ${result.error || 'Upload failed'}`);
+                    const text = await response.text();
+                    console.error('Upload API returned non-JSON:', text);
+                    alert("Server returned error (check console).");
                 }
             } catch (error) {
                 console.error('Logo upload failed:', error);
@@ -276,14 +292,23 @@ document.addEventListener('DOMContentLoaded', function () {
             fetchAndUpdateAdminTimerDisplays();
         }
     }
+
+    // --- NEW FEATURE LOGIC: Background and Sounds ---
     
     // Generic Helper for new uploads
     async function handleNewUpload(url, formData) {
         try {
             const res = await fetch(url, { method: 'POST', body: formData });
-            const data = await res.json();
-            if (res.ok) return { success: true, data };
-            return { success: false, error: data.error };
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const data = await res.json();
+                if (res.ok) return { success: true, data };
+                return { success: false, error: data.error };
+            } else {
+                const text = await res.text();
+                console.error(`Upload API ${url} returned non-JSON:`, text);
+                return { success: false, error: "Server returned non-JSON (check console)" };
+            }
         } catch (e) { return { success: false, error: e.toString() }; }
     }
 
@@ -295,8 +320,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const res = await handleNewUpload('/api/upload_background', new FormData(this));
             if (res.success) { 
                 alert(res.data.message); 
-                document.getElementById('current-bg-name').textContent = res.data.filename; 
-                document.getElementById('delete-background-btn').style.display = 'inline-block'; 
+                const nameSpan = document.getElementById('current-bg-name');
+                if(nameSpan) nameSpan.textContent = res.data.filename;
+                const delBtn = document.getElementById('delete-background-btn');
+                if(delBtn) delBtn.style.display = 'inline-block'; 
                 this.reset(); 
             } else {
                 alert("Error: " + res.error);
@@ -304,47 +331,96 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Sound Uploads
-    document.querySelectorAll('.upload-form').forEach(form => {
-        if(form.id === 'upload-background-form') return; // Skip bg form
-        
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const type = this.getAttribute('data-sound-type'); 
-            if (!type) return;
-            const res = await handleNewUpload(`/api/upload_sound/${type}`, new FormData(this));
-            if (res.success) { 
-                alert(res.data.message); 
-                document.getElementById(`current-${type}-sound`).textContent = res.data.filename; 
-                document.getElementById(`delete-${type}-sound-btn`).style.display = 'inline-block'; 
-                this.reset(); 
-            } else {
-                alert("Error: " + res.error);
-            }
-        });
-    });
-    
-    // Deletions (Background & Sounds)
+    // Delete Buttons (Background & Sounds)
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async function() {
             let url = '';
             const type = this.getAttribute('data-sound-type');
-            if (this.id === 'delete-background-btn') url = '/api/delete_background';
-            else if (type) url = `/api/delete_sound/${type}`;
-            else if (this.classList.contains('delete-logo-btn')) return; // Skip, handled elsewhere
-
+            
+            if (this.id === 'delete-background-btn') {
+                url = '/api/delete_background';
+            } else if (type) {
+                url = `/api/delete_sound/${type}`;
+            } else if (this.classList.contains('delete-logo-btn')) {
+                 // Handled in renderLogoList logic, skip here to avoid double binding issues or logic conflicts
+                 return;
+            }
+            
             if (url && confirm("Are you sure you want to delete this custom file?")) {
-                const res = await fetch(url, { method: 'DELETE' });
-                const data = await res.json();
-                if (res.ok) { 
-                    alert(data.message); 
+                const res = await callApi(url, 'DELETE');
+                if (res && res.ok) { 
+                    alert(res.data.message); 
                     location.reload(); 
-                } else {
-                    alert("Error: " + data.error);
+                } else if (res) {
+                    alert("Error: " + res.error);
                 }
             }
         });
     });
+
+    // --- Sound Upload and Delete (Restored from Uploaded File) ---
+    async function handleSoundUpload(e) {
+        e.preventDefault();
+        const soundType = this.getAttribute('data-sound-type');
+        const formData = new FormData(this);
+        
+        try {
+            // Using the robust handleNewUpload helper logic here manually for clarity/integration
+            const res = await handleNewUpload(`/api/upload_sound/${soundType}`, formData);
+
+            if (res.success) {
+                alert(res.data.message);
+                const nameSpan = document.getElementById(`current-${soundType}-sound`);
+                if(nameSpan) nameSpan.textContent = res.data.filename;
+                const delBtn = document.getElementById(`delete-${soundType}-sound-btn`);
+                if(delBtn) delBtn.style.display = 'inline-block';
+                this.reset();
+            } else {
+                alert(`${soundType.replace('_', ' ').toUpperCase()} Upload Failed: ${res.error}`);
+            }
+        } catch (error) {
+            console.error('Sound upload failed:', error);
+            alert('Sound upload failed. See console.');
+        }
+    }
+
+    async function handleSoundDelete(e) {
+        // This function logic is largely redundant with the generic delete-btn listener above,
+        // but kept here to match the specific logic flow requested.
+        const soundType = this.getAttribute('data-sound-type');
+        if (confirm(`Are you sure you want to delete the custom ${soundType.replace('_', ' ')} sound? It will revert to the default tone.`)) {
+            const result = await callApi(`/api/delete_sound/${soundType}`, 'DELETE');
+            if (result && result.ok) {
+                alert(result.data.message);
+                const nameSpan = document.getElementById(`current-${soundType}-sound`);
+                if(nameSpan) nameSpan.textContent = 'Default Tone';
+                const delBtn = document.getElementById(`delete-${soundType}-sound-btn`);
+                if(delBtn) delBtn.style.display = 'none';
+            } else {
+                 alert(`Failed to delete sound: ${result.data ? result.data.error : 'Unknown error.'}`);
+            }
+        }
+    }
+
+    // Explicitly binding these specific handlers to match the uploaded file's structure
+    const uploadTimesUpForm = document.getElementById('upload-times-up-sound-form');
+    if(uploadTimesUpForm) uploadTimesUpForm.addEventListener('submit', handleSoundUpload);
+
+    const uploadLowTimeForm = document.getElementById('upload-low-time-sound-form');
+    if(uploadLowTimeForm) uploadLowTimeForm.addEventListener('submit', handleSoundUpload);
+
+    const deleteTimesUpBtn = document.getElementById('delete-times-up-sound-btn');
+    if(deleteTimesUpBtn) {
+        // Remove existing listener from generic block if any to prevent double firing, 
+        // though safely adding this specific handler is fine as long as logic is idempotent.
+        deleteTimesUpBtn.addEventListener('click', handleSoundDelete);
+    }
+
+    const deleteLowTimeBtn = document.getElementById('delete-low-time-sound-btn');
+    if(deleteLowTimeBtn) {
+        deleteLowTimeBtn.addEventListener('click', handleSoundDelete);
+    }
+
 
     // --- Main Data Fetching and UI Refresh ---
     function formatAdminTime(totalSeconds) {
@@ -382,7 +458,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     const logoSelectEl = document.getElementById(`logo-select-${timerId}`);
                     if (logoSelectEl) {
-                        logoSelectEl.value = data.logo_filename || "";
+                        // Only update if not currently focused to avoid annoying UI jumps while selecting
+                        if (document.activeElement !== logoSelectEl) {
+                             logoSelectEl.value = data.logo_filename || "";
+                        }
                     }
                 }
             }
