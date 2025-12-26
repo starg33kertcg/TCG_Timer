@@ -15,63 +15,26 @@ document.addEventListener('DOMContentLoaded', function () {
     
     let sounds = { times_up: null, low_time: null };
     let player = null; 
-    let audioInitialized = false;
 
-    // --- SYNTHS FOR DEFAULT TONES ---
+    // --- SYNTHS FOR DEFAULT TONES (Digital Alarm Style) ---
     const lowTimeSynth = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.01, decay: 0.3, sustain: 0.0, release: 1 }
     }).toDestination();
 
     const timesUpSynth = new Tone.Synth({
-        oscillator: { type: "square" },
+        oscillator: { type: "square" }, // Square wave for "alarm" sound
         envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 }
     }).toDestination();
 
-    // --- AUDIO START LOGIC ---
-    const overlay = document.getElementById('audio-start-overlay');
-    
-    async function initAudio() {
-        // 1. Hide the overlay IMMEDIATELY so the user can see the timer
-        if (overlay) {
-            overlay.style.transition = 'opacity 0.5s'; // Ensure smooth fade
-            overlay.style.opacity = '0';
-            // Remove from DOM after fade
-            setTimeout(() => { 
-                if(overlay) overlay.style.display = 'none'; 
-            }, 500);
-        }
-
-        if (audioInitialized) return;
-        
-        // 2. Attempt to start Audio in the background
-        try {
-            await Tone.start();
-            console.log('Audio Context Started');
-            audioInitialized = true;
-        } catch (e) {
-            console.warn('Audio Context failed to start (Audio might be silent):', e);
-            // We don't block the UI if audio fails
-        }
-    }
-
-    if (overlay) {
-        overlay.addEventListener('click', initAudio);
-        // Add touchstart for better responsiveness on touch screens
-        overlay.addEventListener('touchstart', initAudio, {passive: true});
-    }
-    
-    // Fallback: also try to init on any body click
-    document.body.addEventListener('click', initAudio, { once: true });
-
+    // Initialize Audio Context
+    document.body.addEventListener('click', async () => {
+        await Tone.start();
+        console.log('Audio ready');
+    }, { once: true });
 
     function play(type) {
-        // If Tone isn't ready or context is suspended, try to resume it on the fly
-        if (Tone.context.state !== 'running') {
-             Tone.start().catch(() => {});
-             if(Tone.context.state !== 'running') return;
-        }
-        
+        if (Tone.context.state !== 'running') return;
         const url = sounds[type];
         
         if (url) {
@@ -81,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             const now = Tone.now();
             if (type === 'times_up') {
+                // "bee-de-de-beep" pattern
                 const note = "B5"; const speed = 0.12; const gap = 1.2;
                 for (let i = 0; i < 4; i++) {
                     const start = now + (i * gap);
@@ -90,6 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     timesUpSynth.triggerAttackRelease(note, "0.05", start + speed*3);
                 }
             } else if (type === 'low_time') {
+                // 3 clean dings
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now);
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now + 0.5);
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now + 1.0);
@@ -113,8 +78,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (data.background_filename) {
             document.body.style.backgroundImage = `url(/static/backgrounds/${data.background_filename})`;
             document.body.style.backgroundSize = 'cover';
-            document.body.style.backgroundPosition = 'center'; 
-            document.body.style.backgroundAttachment = 'fixed';
+            document.body.style.backgroundPosition = 'center'; // added positioning
+            document.body.style.backgroundAttachment = 'fixed'; // added attachment
         } else {
             document.body.style.backgroundImage = 'none';
         }
@@ -130,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const el = texts[id];
             
+            // Logic for "TIME'S UP" and Low Time Color
             if (t.times_up) {
                 el.textContent = "TIME'S UP";
                 el.style.color = theme.low_time_color || theme.font_color || '#FF0000';
@@ -156,6 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             
             status[id].times_up = t.times_up;
+            
             if (t.logo_filename) { logos[id].src = `/static/uploads/${t.logo_filename}`; logos[id].style.display = 'block'; }
             else logos[id].style.display = 'none';
             
@@ -176,4 +143,5 @@ document.addEventListener('DOMContentLoaded', function () {
     setInterval(() => {
         fetch('/api/timer_status').then(r=>r.json()).then(update).catch(console.error);
     }, 100);
+    
 });
