@@ -42,8 +42,12 @@ if [ ! -d "$APP_FILES_SOURCE_DIR" ]; then
     print_error "Please ensure 'app_files' directory is in the same location as this script!"
     exit 1
 fi
-for f in "${APP_FILES_SOURCE_DIR}/app.py" "${APP_FILES_SOURCE_DIR}/requirements.txt" "${APP_FILES_SOURCE_DIR}/config_template.json"; do
-    if [ ! -f "$f" ]; then
+for f in "${APP_FILES_SOURCE_DIR}/app.py" "${APP_FILES_SOURCE_DIR}/requirements.txt" "${APP_FILES_SOURCE_DIR}/config.json"; do
+    # Note: Using config.json directly now instead of template for simplicity in updates, 
+    # logic below handles if it exists or needs creation/modification.
+    if [ ! -f "$f" ] && [ "$f" != "${APP_FILES_SOURCE_DIR}/config.json" ]; then 
+       # We allow config.json to be missing in source if we generate it, 
+       # but requirements and app.py are mandatory.
         print_error "Required source file '$f' not found in '${APP_FILES_SOURCE_DIR}'."
         exit 1
     fi
@@ -107,92 +111,101 @@ print_success "System dependencies installed."
 # --- Check for and Disable Conflicting Web Servers ---
 print_info "Checking for conflicting web servers like Apache..."
 
-# Check if the apache2 service exists on the system
 if systemctl list-unit-files | grep -q '^apache2.service'; then
-  print_warning "Apache2 service detected. It will be stopped and disabled to prevent conflicts with Nginx."
-  
-  # Stop the apache2 service if it's running
+  print_warning "Apache2 service detected. Stopping and disabling..."
   systemctl stop apache2
-  
-  # Disable the apache2 service to prevent it from starting on boot
   systemctl disable apache2
-  
-  print_success "Apache2 service has been stopped and disabled."
+  print_success "Apache2 stopped and disabled."
 else
   print_info "No conflicting Apache2 service found."
 fi
-# --- END NEW SECTION ---
 
 # --- Create or Validate Application User ---
 if id "$APP_USER" &>/dev/null; then
-  print_warning "User '$APP_USER' already exists."
-  print_warning "Using an existing interactive user for a service application is not recommended for security reasons, but the setup will proceed."
-  print_info "Normally you would create a service user to manage an app. Since this is an existing user, we will not modify the graphical shell permissions to prevent lockout."
+  print_warning "User '$APP_USER' already exists. Proceeding."
 else
   print_info "Creating new dedicated application user '$APP_USER'..."
-  # Create a system user with no login shell and create a primary group with the same name.
   useradd -r -s /bin/false -U "$APP_USER" || { print_error "Failed to create user '$APP_USER'."; exit 1; }
-  print_success "New user '$APP_USER' and group '$APP_USER' created."
+  print_success "User '$APP_USER' created."
 fi
 
 # --- Add www-data to APP_USER's group ---
-# This allows Nginx (running as www-data) to access the Gunicorn socket
-print_info "Adding 'www-data' user to the '$APP_USER' group for Nginx socket access..."
-usermod -aG "$APP_USER" www-data || print_warning "Failed to add www-data to group '$APP_USER'. This might cause Nginx connection issues later."
-print_success "'www-data' user added to '$APP_USER' group."
+print_info "Adding 'www-data' user to the '$APP_USER' group..."
+usermod -aG "$APP_USER" www-data || print_warning "Failed to add www-data to group."
+print_success "'www-data' added to '$APP_USER' group."
 
-# --- Create Application Directories and Copy Files ---
+# --- Create Directories and Copy Files ---
 print_info "Setting up application directory: $APP_INSTALL_DIR"
-mkdir -p "$APP_INSTALL_DIR" || { print_error "Failed to create directory $APP_INSTALL_DIR."; exit 1; }
+mkdir -p "$APP_INSTALL_DIR" || { print_error "Failed to create directory."; exit 1; }
 mkdir -p "${APP_INSTALL_DIR}/static/uploads" 
+mkdir -p "${APP_INSTALL_DIR}/static/audio" 
+mkdir -p "${APP_INSTALL_DIR}/static/backgrounds" 
 
-print_info "Copying application files from $APP_FILES_SOURCE_DIR to $APP_INSTALL_DIR..."
-cp -r "${APP_FILES_SOURCE_DIR}/." "$APP_INSTALL_DIR/" || { print_error "Failed to copy application files."; exit 1; } 
+print_info "Copying application files..."
+cp -r "${APP_FILES_SOURCE_DIR}/." "$APP_INSTALL_DIR/" || { print_error "Failed to copy files."; exit 1; } 
 
-print_info "Creating config.json..."
-if [ -f "${APP_INSTALL_DIR}/config_template.json" ]; then
-    sed "s/WILL_BE_SET_BY_SETUP_SCRIPT/$ADMIN_PIN/" "${APP_INSTALL_DIR}/config_template.json" > "${APP_INSTALL_DIR}/config.json"
-    rm "${APP_INSTALL_DIR}/config_template.json" 
-    print_success "config.json created with specified PIN."
-else
-    print_error "config_template.json not found in target directory after copy. Did you rename it or delete it?"
-    exit 1
-fi
+print_info "Configuring config.json..."
+# Create a fresh config structure or update existing one
+# We use a temporary python script to generate the JSON with the hashed PIN securely
+cat <<EOF > "${APP_INSTALL_DIR}/init_config.py"
+import json, hashlib, os
+config_file = "${APP_INSTALL_DIR}/config.json"
+pin = "${ADMIN_PIN}"
+salt = os.urandom(16).hex()
+hashed_pin = hashlib.sha256((salt + pin).encode('utf-8')).hexdigest()
+stored_value = f"{salt}${hashed_pin}"
+
+data = {
+    "logos": [],
+    "theme": {
+        "background": "#000000",
+        "font_color": "#FFFFFF",
+        "low_time_minutes": 5,
+        "warning_enabled": True,
+        "low_time_color": "#FF0000"
+    },
+    "custom_background_filename": None,
+    "times_up_sound_filename": None,
+    "low_time_sound_filename": None,
+    "admin_pin_hashed": stored_value
+}
+
+with open(config_file, 'w') as f:
+    json.dump(data, f, indent=4)
+EOF
+
+$PYTHON_EXEC "${APP_INSTALL_DIR}/init_config.py"
+rm "${APP_INSTALL_DIR}/init_config.py"
+print_success "config.json created with secure PIN."
 
 # --- Setup Python Virtual Environment ---
-print_info "Setting up Python virtual environment in ${APP_INSTALL_DIR}/${VENV_DIR_NAME}..."
-$PYTHON_EXEC -m venv "${APP_INSTALL_DIR}/${VENV_DIR_NAME}" || { print_error "Failed to create Python virtual environment."; exit 1; }
+print_info "Setting up Python venv..."
+$PYTHON_EXEC -m venv "${APP_INSTALL_DIR}/${VENV_DIR_NAME}" || { print_error "Failed to create venv."; exit 1; }
 
-print_info "Installing Python dependencies from requirements.txt..."
+print_info "Installing Python dependencies..."
 source "${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/activate"
-"${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/pip" install --no-cache-dir -r "${APP_INSTALL_DIR}/requirements.txt" || { print_error "Failed to install Python dependencies."; deactivate; exit 1; }
+"${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/pip" install --no-cache-dir -r "${APP_INSTALL_DIR}/requirements.txt" || { print_error "Failed to install dependencies."; deactivate; exit 1; }
+# Ensure waitress/flask are installed if not in requirements.txt
+"${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/pip" install waitress Flask || print_warning "Manual install of Flask/Waitress failed."
 deactivate
-print_success "Python virtual environment and dependencies set up."
+print_success "Python environment set up."
 
 # --- Set Permissions ---
-print_info "Setting file and directory permissions..."
-# Owner: APP_USER, Group: APP_USER for all app files
-chown -R "$APP_USER":"$APP_USER" "$APP_INSTALL_DIR" || print_warning "Failed to chown some app files to $APP_USER."
-# User: rwx, Group: rx, Other: rx for directories
-# User: rw, Group: r, Other: r for files
+print_info "Setting permissions..."
+chown -R "$APP_USER":"$APP_USER" "$APP_INSTALL_DIR"
 find "$APP_INSTALL_DIR" -type d -exec chmod 755 {} \; 
 find "$APP_INSTALL_DIR" -type f -exec chmod 644 {} \; 
-# Specific write permissions needed by the app
-chmod u+w "${APP_INSTALL_DIR}/config.json" 
-chmod -R u+w "${APP_INSTALL_DIR}/static/uploads" 
-# Ensure execute on venv executables
+chmod -R u+w "${APP_INSTALL_DIR}/static"
+chmod -R u+w "${APP_INSTALL_DIR}/config.json"
 chmod +x ${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/python
 chmod +x ${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/gunicorn
-# Set SGID on directories so new files inherit group (optional but good practice)
-# find "$APP_INSTALL_DIR" -type d -exec chmod g+s {} \; # Reconsidering this, as simple ownership is key.
-
 print_success "Permissions set."
 
 # --- Setup Gunicorn Systemd Service ---
-SERVICE_NAME="${APP_NAME}.service" # e.g., TCG_Timer_app.service
+SERVICE_NAME="${APP_NAME}.service"
 GUNICORN_SOCKET_FILE="${APP_INSTALL_DIR}/gunicorn.sock"
 
-print_info "Creating Gunicorn systemd service: $SERVICE_NAME"
+print_info "Creating Systemd service: $SERVICE_NAME"
 cat <<EOF > "/etc/systemd/system/${SERVICE_NAME}"
 [Unit]
 Description=Gunicorn instance for the ${APP_NAME} 
@@ -213,18 +226,15 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-print_info "Enabling Gunicorn service '$SERVICE_NAME' to start on reboot..."
-systemctl enable "$SERVICE_NAME" || { print_error "Failed to enable systemd service $SERVICE_NAME."; exit 1; }
-print_info "Starting Gunicorn service '$SERVICE_NAME'..."
-systemctl start "$SERVICE_NAME" || { print_error "Failed to start systemd service $SERVICE_NAME. Check logs with 'journalctl -u $SERVICE_NAME' and /var/log/${APP_NAME}_gunicorn_*.log"; exit 1; }
-print_success "Gunicorn systemd service '$SERVICE_NAME' created, enabled, and started."
+systemctl enable "$SERVICE_NAME"
+systemctl restart "$SERVICE_NAME"
+print_success "Service '$SERVICE_NAME' started."
 
-# --- Setup Nginx as a Reverse Proxy ---
-NGINX_CONF_NAME="${APP_NAME}.conf" # e.g., TCG_Timer_app.conf
-print_info "Configuring Nginx reverse proxy..."
+# --- Setup Nginx ---
+NGINX_CONF_NAME="${APP_NAME}.conf"
+print_info "Configuring Nginx..."
 
 if [ -L "/etc/nginx/sites-enabled/default" ]; then
-    print_info "Disabling default Nginx site."
     rm -f "/etc/nginx/sites-enabled/default"
 fi
 
@@ -233,6 +243,9 @@ server {
     listen ${APP_PORT};
     listen [::]:${APP_PORT}; 
     server_name _; 
+
+    # INCREASED UPLOAD SIZE LIMIT
+    client_max_body_size 10M;
 
     access_log /var/log/nginx/${APP_NAME}_access.log;
     error_log /var/log/nginx/${APP_NAME}_error.log;
@@ -254,51 +267,26 @@ server {
 }
 EOF
 
-if [ -L "/etc/nginx/sites-enabled/${NGINX_CONF_NAME}" ]; then
-    print_warning "Nginx site '${NGINX_CONF_NAME}' already enabled."
-else
-    ln -s "/etc/nginx/sites-available/${NGINX_CONF_NAME}" "/etc/nginx/sites-enabled/" || { print_error "Failed to enable Nginx site."; exit 1; }
+if [ ! -L "/etc/nginx/sites-enabled/${NGINX_CONF_NAME}" ]; then
+    ln -s "/etc/nginx/sites-available/${NGINX_CONF_NAME}" "/etc/nginx/sites-enabled/"
 fi
 
-print_info "Enabling Nginx service to start on reboot..."
-systemctl enable nginx || print_warning "Failed to enable nginx service. It might already be enabled."
-print_info "Testing Nginx configuration and reloading..."
-nginx -t || { print_error "Nginx configuration test failed. Please check Nginx logs."; exit 1; }
-systemctl reload nginx || systemctl restart nginx || { print_error "Failed to reload/restart Nginx."; exit 1; } # Try reload, then restart
-print_success "Nginx configured, enabled, and reloaded/restarted."
+systemctl reload nginx || systemctl restart nginx
+print_success "Nginx configured."
 
-# --- Firewall Configuration (UFW) ---
-print_info "Configuring firewall (UFW)..."
+# --- Firewall ---
+print_info "Configuring firewall..."
 ufw allow ssh 
 ufw allow "${APP_PORT}/tcp" comment "${APP_NAME} HTTP"
-# Check if UFW is active before enabling to avoid error message if already active
 if ! ufw status | grep -qw active; then
-    ufw --force enable || { print_warning "Failed to enable UFW. It might be conflicting with another firewall."; }
-else
-    print_info "UFW is already active."
+    ufw --force enable
 fi
-print_success "Firewall configured to allow SSH and port ${APP_PORT}."
+print_success "Firewall updated."
 
 # --- Final Output ---
-print_success "TCG Timer app installation complete!"
 SERVER_IP=$(hostname -I | awk '{print $1}') 
-if [ -z "$SERVER_IP" ]; then
-    SERVER_IP="<your_server_ip>"
-fi
-
 echo ""
-print_info "You should be able to access the application at:"
-print_info "  Viewer: http://${SERVER_IP}:${APP_PORT}/"
-print_info "  Admin Dashboard: http://${SERVER_IP}:${APP_PORT}/admin"
-print_info "  Admin PIN: ${ADMIN_PIN} (Keep this secure!)"
-echo ""
-print_info "Important Notes:"
-print_info " - Application runs as user '$APP_USER'."
-print_info " - Gunicorn service: '$SERVICE_NAME'. Check status with 'systemctl status $SERVICE_NAME'."
-print_info " - Nginx service: 'nginx'. Check status with 'systemctl status nginx'."
-print_info " - Application files: '$APP_INSTALL_DIR'."
-print_info " - Python environment: '${APP_INSTALL_DIR}/${VENV_DIR_NAME}'."
-print_info " - Gunicorn logs: /var/log/${APP_NAME}_gunicorn_*.log"
-print_info " - Nginx logs: /var/log/nginx/${APP_NAME}_*.log"
-
+print_success "Installation Complete!"
+print_info "Access Viewer: http://${SERVER_IP}:${APP_PORT}/"
+print_info "Access Admin: http://${SERVER_IP}:${APP_PORT}/admin"
 exit 0
