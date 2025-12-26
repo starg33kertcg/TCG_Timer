@@ -43,11 +43,7 @@ if [ ! -d "$APP_FILES_SOURCE_DIR" ]; then
     exit 1
 fi
 for f in "${APP_FILES_SOURCE_DIR}/app.py" "${APP_FILES_SOURCE_DIR}/requirements.txt" "${APP_FILES_SOURCE_DIR}/config.json"; do
-    # Note: Using config.json directly now instead of template for simplicity in updates, 
-    # logic below handles if it exists or needs creation/modification.
     if [ ! -f "$f" ] && [ "$f" != "${APP_FILES_SOURCE_DIR}/config.json" ]; then 
-       # We allow config.json to be missing in source if we generate it, 
-       # but requirements and app.py are mandatory.
         print_error "Required source file '$f' not found in '${APP_FILES_SOURCE_DIR}'."
         exit 1
     fi
@@ -105,7 +101,6 @@ fi
 # --- System Update and Dependency Installation ---
 print_info "Updating system packages and installing dependencies..."
 apt-get update -q || { print_error "apt-get update failed."; exit 1; }
-# Changed gunicorn to python3-waitress if available, but pip install is better for consistent versions
 apt-get install -y -q nginx curl ufw $PYTHON_EXEC $PYTHON_EXEC-pip $PYTHON_EXEC-venv || { print_error "Failed to install dependencies."; exit 1; }
 print_success "System dependencies installed."
 
@@ -146,15 +141,10 @@ print_info "Copying application files..."
 cp -r "${APP_FILES_SOURCE_DIR}/." "$APP_INSTALL_DIR/" || { print_error "Failed to copy files."; exit 1; } 
 
 print_info "Configuring config.json..."
-# Create a fresh config structure or update existing one
-# We use a temporary python script to generate the JSON with the hashed PIN securely
 cat <<EOF > "${APP_INSTALL_DIR}/init_config.py"
-import json, hashlib, os
+import json
 config_file = "${APP_INSTALL_DIR}/config.json"
 pin = "${ADMIN_PIN}"
-salt = os.urandom(16).hex()
-hashed_pin = hashlib.sha256((salt + pin).encode('utf-8')).hexdigest()
-stored_value = f"{salt}${hashed_pin}"
 
 data = {
     "logos": [],
@@ -168,7 +158,7 @@ data = {
     "custom_background_filename": None,
     "times_up_sound_filename": None,
     "low_time_sound_filename": None,
-    "admin_pin_hashed": stored_value
+    "admin_pin_unhashed": pin  # App.py will detect this, hash it, and remove it.
 }
 
 with open(config_file, 'w') as f:
@@ -177,7 +167,7 @@ EOF
 
 $PYTHON_EXEC "${APP_INSTALL_DIR}/init_config.py"
 rm "${APP_INSTALL_DIR}/init_config.py"
-print_success "config.json created with secure PIN."
+print_success "config.json created. App will secure PIN on first start."
 
 # --- Setup Python Virtual Environment ---
 print_info "Setting up Python venv..."
@@ -199,14 +189,12 @@ find "$APP_INSTALL_DIR" -type f -exec chmod 644 {} \;
 chmod -R u+w "${APP_INSTALL_DIR}/static"
 chmod -R u+w "${APP_INSTALL_DIR}/config.json"
 chmod +x ${APP_INSTALL_DIR}/${VENV_DIR_NAME}/bin/python
-# Removed incorrect chmod for gunicorn, using waitress via python
 print_success "Permissions set."
 
 # --- Setup Systemd Service (Using Waitress) ---
 SERVICE_NAME="${APP_NAME}.service"
 
 print_info "Creating Systemd service: $SERVICE_NAME"
-# Note: ExecStart now uses the venv python to run app.py directly, which invokes waitress.serve()
 cat <<EOF > "/etc/systemd/system/${SERVICE_NAME}"
 [Unit]
 Description=Waitress instance for the ${APP_NAME} 
