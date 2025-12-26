@@ -35,9 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (overlay) {
             overlay.style.transition = 'opacity 0.5s'; 
             overlay.style.opacity = '0';
-            setTimeout(() => { 
-                if(overlay) overlay.style.display = 'none'; 
-            }, 500);
+            setTimeout(() => { if(overlay) overlay.style.display = 'none'; }, 500);
         }
 
         if (audioInitialized) return;
@@ -47,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('Audio Context Started');
             audioInitialized = true;
         } catch (e) {
-            console.warn('Audio Context failed to start (Audio might be silent):', e);
+            console.warn('Audio Context failed to start:', e);
         }
     }
 
@@ -55,7 +53,6 @@ document.addEventListener('DOMContentLoaded', function () {
         overlay.addEventListener('click', initAudio);
         overlay.addEventListener('touchstart', initAudio, {passive: true});
     }
-    
     document.body.addEventListener('click', initAudio, { once: true });
 
 
@@ -118,11 +115,14 @@ document.addEventListener('DOMContentLoaded', function () {
         Object.keys(data.timers).forEach(id => {
             if (!wrappers[id]) return;
             const t = data.timers[id];
+            
+            // Set display based on enabled state
             wrappers[id].style.display = t.enabled ? 'flex' : 'none';
             if (!t.enabled) return;
 
             const el = texts[id];
             
+            // Times Up
             if (t.times_up) {
                 el.textContent = "TIME'S UP";
                 el.style.color = theme.low_time_color || theme.font_color || '#FF0000';
@@ -150,8 +150,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (t.logo_filename) { logos[id].src = `/static/uploads/${t.logo_filename}`; logos[id].style.display = 'block'; }
             else logos[id].style.display = 'none';
             
-            wrappers[id].classList.toggle('running', t.is_running);
-            wrappers[id].classList.toggle('paused', !t.is_running && !t.times_up && t.enabled);
         });
         
         adjustLayout();
