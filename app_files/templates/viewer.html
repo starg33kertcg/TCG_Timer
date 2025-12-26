@@ -8,6 +8,14 @@
     <script src="https://cdn.jsdelivr.net/npm/tone@14.9.14/build/Tone.min.js"></script>
 </head>
 <body>
+    <!-- Audio Start Overlay -->
+    <div id="audio-start-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); color: white; display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer;">
+        <div style="text-align: center;">
+            <h1 style="font-size: 3em; margin-bottom: 20px;">Click to Enable Sound</h1>
+            <p>Your web browser policy requires interaction to play audio.</p>
+        </div>
+    </div>
+
     <div class="timer-container" id="app-container">
         <!-- Timer 1 Wrapper -->
         <div id="timer-1-wrapper" class="timer-wrapper" style="display:none;">
