@@ -1,86 +1,93 @@
+/* In app_files/static/css/viewer.css */
+
+html {
+    box-sizing: border-box;
+}
+
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+
 body, html {
-    margin: 0;
-    padding: 0;
-    width: 100%;
     height: 100%;
-    overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #000;
-    color: #fff;
+    margin: 0;
+    background-color: black;
+    color: white;
+    font-family: 'Arial', 'Helvetica Neue', Helvetica, sans-serif;
+    overflow: hidden; 
 }
 
 .timer-container {
     display: flex;
+    justify-content: center; 
+    align-items: center;
     width: 100%;
     height: 100%;
-    justify-content: center;
-    align-items: center;
+    padding-left: 1.5vw;  
+    padding-right: 1.5vw; 
 }
 
-/* The wrapper for a single timer (Logo + Text) */
 .timer-wrapper {
-    display: flex;
+    display: flex; 
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
-    flex: 1; /* Grow to fill space */
-    height: 100%;
-    transition: background-color 0.2s;
+    flex-grow: 1; 
+    flex-basis: 0; 
+    height: 100%; 
+    padding: 10px; 
 }
 
-/* Logo Styling */
+.timer-wrapper.single-active { 
+    width: 100%; 
+}
+
+.timer-wrapper.dual-active {
+    width: 49%; 
+}
+
+#timer-1-wrapper.dual-active {
+    margin-right: 0.5%; /* Creates half of a 1% gap between timers */
+}
+
+#timer-2-wrapper.dual-active {
+    margin-left: 0.5%;  /* Creates the other half of a 1% gap */
+}
+
 .logo-img {
-    max-width: 80%;
-    max-height: 40vh; /* Limit height so it doesn't push text off screen */
+    max-height: 25vh;
+    max-width: 90%; 
+    margin-bottom: 3vh;
     object-fit: contain;
-    margin-bottom: 20px;
 }
 
-/* Timer Text Styling */
 .timer-text {
-    font-size: 15vw; /* Responsive font size */
+    font-size: min(18vh, 9vw); 
     font-weight: bold;
     line-height: 1;
-    font-variant-numeric: tabular-nums; /* Prevents jitter when numbers change */
+    white-space: nowrap;
 }
 
-/* Special sizing for MM:SS vs HH:MM:SS if needed */
-.timer-text-mm-ss {
-    font-size: 18vw; 
+.timer-wrapper.dual-active .timer-text {
+    font-size: min(12vh, 6vw); 
 }
 
-/* Status Classes */
-.times-up {
+.timer-text.timer-text-mm-ss {
+    font-size: min(22vh, 13vw); 
+}
+
+.timer-wrapper.dual-active .timer-text.timer-text-mm-ss {
+    font-size: min(15vh, 8vw); 
+}
+
+.low-time-warning { 
     color: red;
-    animation: flash-red 1s infinite;
 }
 
-.low-time {
-    color: red; /* Or overridden by JS theme color */
-    animation: pulse 1s infinite;
-}
-
-/* Visual Feedback for Running State (Optional, subtle pulse) */
-.timer-wrapper.running .timer-text {
-    /* text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); */
-}
-
-.timer-wrapper.paused {
-    opacity: 0.6;
-}
-
-/* Layout for Single vs Dual View */
-.single-active {
-    width: 100%;
-}
-
-.dual-active {
-    width: 50%;
-    border-right: 1px solid #333;
-}
-.dual-active:last-child {
-    border-right: none;
+.timer-text.times-up {
+    color: #FF0000;
+    font-weight: bold;
 }
 
 /* Animations */
@@ -90,8 +97,6 @@ body, html {
     100% { opacity: 1; }
 }
 
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
+.times-up {
+    animation: flash-red 1s infinite;
 }
