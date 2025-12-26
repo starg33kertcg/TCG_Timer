@@ -15,26 +15,56 @@ document.addEventListener('DOMContentLoaded', function () {
     
     let sounds = { times_up: null, low_time: null };
     let player = null; 
+    let audioInitialized = false;
 
-    // --- SYNTHS FOR DEFAULT TONES (Digital Alarm Style) ---
+    // --- SYNTHS FOR DEFAULT TONES ---
     const lowTimeSynth = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.01, decay: 0.3, sustain: 0.0, release: 1 }
     }).toDestination();
 
     const timesUpSynth = new Tone.Synth({
-        oscillator: { type: "square" }, // Square wave for "alarm" sound
+        oscillator: { type: "square" },
         envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 }
     }).toDestination();
 
-    // Initialize Audio Context
-    document.body.addEventListener('click', async () => {
-        await Tone.start();
-        console.log('Audio ready');
-    }, { once: true });
+    // --- AUDIO START LOGIC ---
+    const overlay = document.getElementById('audio-start-overlay');
+    
+    async function initAudio() {
+        if (overlay) {
+            overlay.style.transition = 'opacity 0.5s'; 
+            overlay.style.opacity = '0';
+            setTimeout(() => { 
+                if(overlay) overlay.style.display = 'none'; 
+            }, 500);
+        }
+
+        if (audioInitialized) return;
+        
+        try {
+            await Tone.start();
+            console.log('Audio Context Started');
+            audioInitialized = true;
+        } catch (e) {
+            console.warn('Audio Context failed to start (Audio might be silent):', e);
+        }
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', initAudio);
+        overlay.addEventListener('touchstart', initAudio, {passive: true});
+    }
+    
+    document.body.addEventListener('click', initAudio, { once: true });
+
 
     function play(type) {
-        if (Tone.context.state !== 'running') return;
+        if (Tone.context.state !== 'running') {
+             Tone.start().catch(() => {});
+             if(Tone.context.state !== 'running') return;
+        }
+        
         const url = sounds[type];
         
         if (url) {
@@ -44,7 +74,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             const now = Tone.now();
             if (type === 'times_up') {
-                // "bee-de-de-beep" pattern
                 const note = "B5"; const speed = 0.12; const gap = 1.2;
                 for (let i = 0; i < 4; i++) {
                     const start = now + (i * gap);
@@ -54,7 +83,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     timesUpSynth.triggerAttackRelease(note, "0.05", start + speed*3);
                 }
             } else if (type === 'low_time') {
-                // 3 clean dings
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now);
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now + 0.5);
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now + 1.0);
@@ -78,8 +106,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (data.background_filename) {
             document.body.style.backgroundImage = `url(/static/backgrounds/${data.background_filename})`;
             document.body.style.backgroundSize = 'cover';
-            document.body.style.backgroundPosition = 'center'; // added positioning
-            document.body.style.backgroundAttachment = 'fixed'; // added attachment
+            document.body.style.backgroundPosition = 'center'; 
+            document.body.style.backgroundAttachment = 'fixed';
         } else {
             document.body.style.backgroundImage = 'none';
         }
@@ -95,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const el = texts[id];
             
-            // Logic for "TIME'S UP" and Low Time Color
             if (t.times_up) {
                 el.textContent = "TIME'S UP";
                 el.style.color = theme.low_time_color || theme.font_color || '#FF0000';
@@ -112,17 +139,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     el.style.color = theme.low_time_color || '#FF0000';
                     if (!status[id].low_time) {
                         if (theme.warning_enabled !== false) play('low_time');
-                        el.classList.add('low-time');
                     }
                 } else {
                     el.style.color = theme.font_color || '#FFFFFF'; 
-                    el.classList.remove('low-time');
                 }
                 status[id].low_time = low;
             }
             
             status[id].times_up = t.times_up;
-            
             if (t.logo_filename) { logos[id].src = `/static/uploads/${t.logo_filename}`; logos[id].style.display = 'block'; }
             else logos[id].style.display = 'none';
             
@@ -130,18 +154,9 @@ document.addEventListener('DOMContentLoaded', function () {
             wrappers[id].classList.toggle('paused', !t.is_running && !t.times_up && t.enabled);
         });
         
-        const visible = Object.values(wrappers).filter(w => w.style.display !== 'none').length;
-        Object.values(wrappers).forEach(w => {
-            w.classList.remove('single-active', 'dual-active');
-            if (w.style.display !== 'none') {
-                if (visible === 1) w.classList.add('single-active');
-                if (visible === 2) w.classList.add('dual-active');
-            }
-        });
     }
 
     setInterval(() => {
         fetch('/api/timer_status').then(r=>r.json()).then(update).catch(console.error);
     }, 100);
-    
 });
