@@ -32,29 +32,46 @@ document.addEventListener('DOMContentLoaded', function () {
     const overlay = document.getElementById('audio-start-overlay');
     
     async function initAudio() {
+        // 1. Hide the overlay IMMEDIATELY so the user can see the timer
+        if (overlay) {
+            overlay.style.transition = 'opacity 0.5s'; // Ensure smooth fade
+            overlay.style.opacity = '0';
+            // Remove from DOM after fade
+            setTimeout(() => { 
+                if(overlay) overlay.style.display = 'none'; 
+            }, 500);
+        }
+
         if (audioInitialized) return;
         
-        await Tone.start();
-        console.log('Audio Context Started');
-        audioInitialized = true;
-        
-        // Hide overlay
-        if (overlay) {
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.style.display = 'none', 500); // Fade out
+        // 2. Attempt to start Audio in the background
+        try {
+            await Tone.start();
+            console.log('Audio Context Started');
+            audioInitialized = true;
+        } catch (e) {
+            console.warn('Audio Context failed to start (Audio might be silent):', e);
+            // We don't block the UI if audio fails
         }
     }
 
     if (overlay) {
         overlay.addEventListener('click', initAudio);
+        // Add touchstart for better responsiveness on touch screens
+        overlay.addEventListener('touchstart', initAudio, {passive: true});
     }
     
-    // Fallback: also try to init on any body click just in case
+    // Fallback: also try to init on any body click
     document.body.addEventListener('click', initAudio, { once: true });
 
 
     function play(type) {
-        if (!audioInitialized || Tone.context.state !== 'running') return;
+        // If Tone isn't ready or context is suspended, try to resume it on the fly
+        if (Tone.context.state !== 'running') {
+             Tone.start().catch(() => {});
+             if(Tone.context.state !== 'running') return;
+        }
+        
         const url = sounds[type];
         
         if (url) {
