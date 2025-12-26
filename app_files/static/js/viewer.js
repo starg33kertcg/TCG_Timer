@@ -154,6 +154,28 @@ document.addEventListener('DOMContentLoaded', function () {
             wrappers[id].classList.toggle('paused', !t.is_running && !t.times_up && t.enabled);
         });
         
+        adjustLayout();
+    }
+
+    function adjustLayout() {
+        let visibleTimers = 0;
+        Object.values(wrappers).forEach(container => {
+            if (container && container.style.display !== 'none') {
+                visibleTimers++;
+            }
+        });
+
+        Object.values(wrappers).forEach(container => {
+            if (!container) return;
+            container.classList.remove('single-active', 'dual-active');
+            if (container.style.display !== 'none') {
+                 if (visibleTimers === 1) {
+                    container.classList.add('single-active');
+                } else if (visibleTimers === 2) {
+                    container.classList.add('dual-active');
+                }
+            }
+        });
     }
 
     setInterval(() => {
