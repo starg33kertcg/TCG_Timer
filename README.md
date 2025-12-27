@@ -23,7 +23,7 @@ One day I decided to write a basic web app, with the help of AI, as a passion pr
 
 TCG Timer is made to run on a Ubuntu server with minimal services. You can either run it with dedicated hardware or run it in a virtual machine using the hypervisor of your choice. The viewer is made to run full-screen in a browser or as a Roku app. The admin dashboard can be used in a separate tab or on a separate device on the network to control the viewer. Don't run a TCG tournament? No problem! The TCG Timer app is versatile and can be used in a variety of non-TCG related scenarios.
 
-Best of all? It's yours to use for FREE! I understand that profit margins are narrow on TCG products. This is my contribution to YOU for having to put up with crazy people during new product releases.
+Best of all? It's yours to use for FREE! I understand that profit margins are narrow on TCG products. This is my contribution to YOU for having to put up with crazy people like us.
 
 <a href="https://www.tcgtimer.com">tcgtimer.com</a>
 
@@ -32,26 +32,27 @@ Best of all? It's yours to use for FREE! I understand that profit margins are na
   - Supports up two timers on one viewer
   - Scales automatically
   - 00h00m00s format
-  - Text turns red under 5 minutes (with ability to disable the feature or change the threshold to your preference) (v1.1)
-  - Displays "TIMES UP" when expired
+  - Customizable "low time" threshold (change time threshold, sound effect, and color!)
+  - Displays "TIME'S UP" when expired and plays a customizable sound effect
 - Logo importing and updating in real-time (.PNGs preferred)
 - Theme control
   - Light/Dark theme toggles (Admin dashboard only)
-  - Basic theme options to update the viewer (v1.1)
+  - Change background color or upload a custom background image
+  - Change font colors
 - Mobile compatibility
-- <a href="https://github.com/starg33kertcg/TCG_Timer_Roku">Roku app</a> (Viewer only, the server is still required for functionality)
+- <a href="https://github.com/starg33kertcg/TCG_Timer_Roku">Roku app</a> (Viewer only, the Linux or Windows server is still required for functionality)
 
 ## Screenshots
 Single Timer
-![single_timer](https://github.com/user-attachments/assets/35fe5716-5a92-49e1-acda-2973c6a7ab8c)
+![single-timer](https://github.com/user-attachments/assets/4380a2b1-779c-4767-8986-af614758ce2f)
 Dual Timer
-![image](https://github.com/user-attachments/assets/28ce7997-362b-43f3-882e-1f241d03647b)
+![dual-timer](https://github.com/user-attachments/assets/1bb50700-9ba4-4013-9a3a-2a6325aa5f46)
 Admin Login
 ![admin_login](https://github.com/user-attachments/assets/d6912ce2-0bb5-4ccf-b48d-0eedc8e1c2ab)
 Admin Dashboard (Light Theme)
-![image](https://github.com/user-attachments/assets/124b48bf-7460-48f4-8684-7fb43a46cd8f)
+![admin-dashboard](https://github.com/user-attachments/assets/63d93640-6845-49df-b89b-fd390b5bd017)
 Admin Dashboard (Dark Theme)
-![image](https://github.com/user-attachments/assets/d90bc386-1291-45a5-acb2-eccf4bf80c1e)
+![admin-dashboard-dark](https://github.com/user-attachments/assets/99a74b91-c027-402e-9430-7faa73ea710c)
 Roku App Configuration
 ![roku_timer3](https://github.com/user-attachments/assets/74c2016e-f2c1-40b0-bff9-2766aefc991d)
 
@@ -66,20 +67,14 @@ Clone GitHub repo
 ```
 git clone https://github.com/starg33kertcg/TCG_Timer.git
 ```
-Change directory to TCG_Timer/app_files/ and update app.py with your own secret key
+Change directory to the new TCG_Timer folder and update the setup.sh file with execute permissions
 ```
-cd TCG_Timer/app_files
-sudo nano app.py
+cd TCG_Timer
 ```
 ```
-app.secret_key = 'YOUR_KEY_HERE'  # Replace with a stronger secret key for session management
-```
-Go back to TCG_Timer/ and update setup.sh with execute permissions
-```
-cd ..
 sudo chmod +x setup.sh
 ```
-Run the setup script (Installs python, nginx, and gunicorn. Configures reverse proxy, firewall, permissions, services, and app parameters)
+Run the setup script (Installs python, nginx, and waitress. Configures reverse proxy, firewall, permissions, services, and app parameters)
 ```
 sudo ./setup.sh
 ```
@@ -93,9 +88,9 @@ Check to see if a conflicting web server is running on TCP/80.
 sudo ss -tlpn | grep ':80'
 ```
 
-***Receiving a "Logo upload failed." message when uploading a logo file or Nginx 413 (Request Entity Too Large) error***
+***Receiving a "File upload failed." message when uploading a new file or Nginx 413 (Request Entity Too Large) error***
 
-The file size of the logo you tried to upload is too large. The file size maximum is 1MB. Try reducing the size of the logo and try again.
+The file size of the file you tried to upload is too large. The file size maximum is 1MB by default with nginx. The setup.sh script should auto update this to 10MB. Try reducing the size of the file and try again or temporarily try a different file.
 
 ## Support
 Have questions? Submit your inquiries to starg33kertcg@gmail.com
