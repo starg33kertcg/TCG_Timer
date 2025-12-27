@@ -102,4 +102,4 @@ Appreciating the app? Consider donating a booster pack or two via Venmo **@starg
 <br>Yes! You can download the .exe file on our website <a href="https://www.tcgtimer.com">tcgtimer.com</a>
 
 ***"Can I run the server in Docker?"***
-<br>Yes! See the <a href="https://github.com/starg33kertcg/TCG_Timer_Docker/tree/main">Docker installation page</a>
+<br>I've dropped support for Docker after v1.1 in order to streamline deployments for Linux (bare metal) and Windows. The Docker version was the least popular of the three.
