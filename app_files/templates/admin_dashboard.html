@@ -9,14 +9,21 @@
 <body class="admin-dashboard-body">
     <header>
         <h1>TCG Timer Admin</h1>
-        <div class="theme-logout">
-            <label class="switch header-switch" title="Toggle Digital Signage Mode">
-                <input type="checkbox" id="toggle-signage-global" {% if config.signage.enabled %}checked{% endif %}>
-                <span class="slider round"></span> <span style="margin-left:50px; font-weight:bold;">Signage Mode</span>
-            </label>
-            <button id="theme-toggle">Toggle Theme</button>
-            <button id="change-pin-btn">Change PIN</button>
-            <a href="{{ url_for('logout') }}" class="button-like">Logout</a>
+        <div style="display: flex; align-items: center; justify-content: flex-end; flex-grow: 1;">
+        
+            <div style="display: flex; align-items: center; margin-right: 20px;">
+                <label class="switch" title="Toggle Digital Signage Mode" style="margin: 0;">
+                    <input type="checkbox" id="toggle-signage-global" {% if config.signage.enabled %}checked{% endif %}>
+                    <span class="slider round"></span>
+                </label>
+                <span style="margin-left: 10px; font-weight: bold; font-size: 1.1em;">Signage Mode</span>
+            </div>
+
+            <div class="theme-logout">
+                <button id="theme-toggle">Toggle Theme</button>
+                <button id="change-pin-btn">Change PIN</button>
+                <a href="{{ url_for('logout') }}" class="button-like">Logout</a>
+            </div>
         </div>
     </header>
 
@@ -40,11 +47,12 @@
                         <input type="number" id="seconds-{{ timer_id }}" placeholder="SS" min="0" max="59" value="0">s
                         <button class="set-time btn-primary" data-timer-id="{{ timer_id }}">Set</button>
                     </fieldset>
+                    
                     <div class="action-buttons">
-                        <button class="start btn-success" data-timer-id="{{ timer_id }}">Start</button>
-                        <button class="pause btn-warning" data-timer-id="{{ timer_id }}">Pause</button>
-                        <button class="resume btn-success" data-timer-id="{{ timer_id }}">Resume</button>
-                        <button class="reset btn-danger" data-timer-id="{{ timer_id }}">Reset</button>
+                        <button class="start" data-timer-id="{{ timer_id }}">Start</button>
+                        <button class="pause" data-timer-id="{{ timer_id }}">Pause</button>
+                        <button class="resume" data-timer-id="{{ timer_id }}">Resume</button>
+                        <button class="reset" data-timer-id="{{ timer_id }}">Reset</button>
                     </div>
                 </div>
                 <div class="logo-controls">
@@ -126,6 +134,7 @@
                 </div>
             </section>
             
+            <!-- Full Background Image -->
             <section class="card file-management-section">
                 <h2>Full Background Image</h2>
                 <p>Current: <span id="current-bg-name">{{ config.custom_background_filename or 'None' }}</span></p>
@@ -135,6 +144,24 @@
                     <button type="submit" class="btn-primary">Upload & Set</button>
                 </form>
                 <button id="delete-background-btn" class="btn-danger" {% if not config.custom_background_filename %}style="display: none;"{% endif %}>Delete Background</button>
+            </section>
+
+            <!-- Logo Management -->
+            <section class="card logo-management">
+                <h2>Logo Management</h2>
+                <form id="upload-logo-form" class="upload-form">
+                    <label for="common-name">Logo Name:</label>
+                    <input type="text" id="common-name" name="common_name" required>
+                    <label for="logo-file">Upload Logo File:</label>
+                    <input type="file" id="logo-file" name="logo_file" accept="image/*" required>
+                    <button type="submit" class="btn-primary">Upload Logo</button>
+                </form>
+                <h3>Available Logos:</h3>
+                <ul id="logo-list" class="item-list">
+                    {% for logo in config.logos %}
+                    <li>{{ logo.name }} ({{ logo.filename }}) <button class="delete-logo-btn btn-danger btn-small" data-filename="{{ logo.filename }}">Delete</button></li>
+                    {% endfor %}
+                </ul>
             </section>
 
             <section class="card theme-management">
