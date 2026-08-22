@@ -84,7 +84,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (enableToggle) {
             enableToggle.addEventListener('change', async function() {
-                // Fixes Issue #5: Prevents enabling timer if time is zero
                 const display = document.getElementById(`admin-timer-${timerId}-display`).textContent;
                 if (this.checked && (display === '00h00m00s' || display === '00:00:00')) {
                     alert("Please set a time greater than 0 before enabling this timer.");
@@ -273,8 +272,20 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // --- ADMIN TIME FORMATTING & FETCHING ---
+    // --- REORDER SIGNAGE LOGIC ---
+    document.querySelectorAll('.move-up-btn, .move-down-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const index = parseInt(this.dataset.index);
+            const direction = this.classList.contains('move-up-btn') ? 'up' : 'down';
+            
+            const result = await callApi('/api/reorder_signage', 'POST', { index: index, direction: direction });
+            if (result && result.ok) {
+                location.reload();
+            }
+        });
+    });
 
+    // --- ADMIN TIME FORMATTING & FETCHING ---
     function formatAdminTime(totalSeconds) {
         if (totalSeconds < 0) totalSeconds = 0;
         const h = Math.floor(totalSeconds / 3600);
