@@ -51,7 +51,6 @@ def save_config(data_to_save):
         json.dump(data_to_save, f, indent=4)
 
 def load_config():
-    """Loads config.json, handling initial PIN hashing and adding new defaults."""
     default_config = {
         "logos": [],
         "theme": {
@@ -81,7 +80,6 @@ def load_config():
             config_data = json.load(f)
             updated = False
 
-            # Hash PIN on first load if unhashed version exists
             if config_data.get("admin_pin_unhashed"):
                 pin_to_hash = config_data["admin_pin_unhashed"]
                 salt = os.urandom(16).hex()
@@ -90,20 +88,17 @@ def load_config():
                 del config_data["admin_pin_unhashed"]
                 updated = True
 
-            # Merge defaults for base keys
             for key, value in default_config.items():
                 if key not in config_data:
                     config_data[key] = value
                     updated = True
             
-            # Specific nested merge for theme
             if "theme" in config_data:
                 for key, value in default_config["theme"].items():
                     if key not in config_data["theme"]:
                         config_data["theme"][key] = value
                         updated = True
             
-            # Specific nested merge for signage
             if "signage" in config_data:
                 for key, value in default_config["signage"].items():
                     if key not in config_data["signage"]:
@@ -194,23 +189,34 @@ def get_timer_status_api():
     timers_response = {}
     now_utc = datetime.utcnow()
     for timer_id, data in timer_data.items():
-        if not data["enabled"]:
-            timers_response[timer_id] = {"time_remaining_seconds": 0, "is_running": False, "times_up": False, "enabled": False, "logo_filename": data["logo_filename"]}
-            continue
         time_remaining = 0; times_up = False; current_is_running = data["is_running"]
+        
         if data["is_running"] and data["end_time_utc_iso"]:
             end_time = datetime.fromisoformat(data["end_time_utc_iso"])
-            remaining_delta = end_time - now_utc; time_remaining = max(0, int(remaining_delta.total_seconds()))
+            remaining_delta = end_time - now_utc
+            time_remaining = max(0, int(remaining_delta.total_seconds()))
             if time_remaining == 0: times_up = True
         elif not data["is_running"] and data["paused_time_remaining_seconds"] is not None:
             time_remaining = data["paused_time_remaining_seconds"]
             if time_remaining == 0: times_up = True
         elif not data["is_running"] and data["initial_duration_seconds"] > 0:
              time_remaining = data["initial_duration_seconds"]
+
+        if not data["enabled"]:
+            time_remaining = 0
+            current_is_running = False
+            times_up = False
+
         timers_response[timer_id] = {
-            "time_remaining_seconds": time_remaining, "is_running": current_is_running,
-            "times_up": times_up, "enabled": data["enabled"], "logo_filename": data["logo_filename"]
+            "time_remaining_seconds": time_remaining,
+            "is_running": current_is_running,
+            "times_up": times_up,
+            "enabled": data["enabled"],
+            "logo_filename": data["logo_filename"],
+            "initial_duration_seconds": data.get("initial_duration_seconds", 0),
+            "paused_time_remaining_seconds": data.get("paused_time_remaining_seconds")
         }
+        
     current_config = load_config()
     return jsonify({
         'timers': timers_response,
@@ -259,6 +265,12 @@ def control_timer_api(timer_id):
         td["logo_filename"] = payload.get('logo_filename')
     return jsonify({"message": f"Timer {timer_id} action {action} processed", "newState": td})
 
+# --- MISSING LOGO API ROUTE ADDED BACK IN ---
+@app.route('/api/get_logos', methods=['GET'])
+@login_required
+def get_logos_api():
+    return jsonify(load_config().get('logos', []))
+
 # --- Centralized Upload Handlers ---
 @app.route('/api/upload_<file_type>', methods=['POST'])
 @login_required
@@ -271,14 +283,12 @@ def handle_uploads(file_type):
         'low_time_sound': ('sound_file', ALLOWED_AUDIO_EXTENSIONS, app.config['AUDIO_FOLDER'], 'low_time_sound_filename')
     }
     
-    if file_type not in file_map: 
-        return jsonify({"error": "Invalid type"}), 400
-        
+    if file_type not in file_map: return jsonify({"error": "Invalid type"}), 400
     input_name, extensions, folder, config_key = file_map[file_type]
-    if input_name not in request.files: 
-        return jsonify({"error": "No file uploaded"}), 400
-        
+    
+    if input_name not in request.files: return jsonify({"error": "No file uploaded"}), 400
     file = request.files[input_name]
+    
     if file and allowed_file(file.filename, extensions):
         fname = generate_unique_filename(file.filename, file_type)
         file.save(os.path.join(folder, fname))
@@ -326,10 +336,8 @@ def handle_deletes(file_type, filename=None):
 def signage_settings():
     cfg = load_config()
     data = request.get_json()
-    if 'enabled' in data: 
-        cfg['signage']['enabled'] = data['enabled']
-    if 'interval_seconds' in data: 
-        cfg['signage']['interval_seconds'] = int(data['interval_seconds'])
+    if 'enabled' in data: cfg['signage']['enabled'] = data['enabled']
+    if 'interval_seconds' in data: cfg['signage']['interval_seconds'] = int(data['interval_seconds'])
     save_config(cfg)
     return jsonify({"message": "Signage settings updated"})
 
@@ -400,8 +408,7 @@ def change_pin_api():
     if not all([current_pin, new_pin]) or not current_pin.isdigit() or not new_pin.isdigit() or len(new_pin) != 5:
         return jsonify({"error": "PINs must be 5 numerical digits."}), 400
         
-    if not check_pin(current_pin): 
-        return jsonify({"error": "Current PIN is incorrect."}), 403
+    if not check_pin(current_pin): return jsonify({"error": "Current PIN is incorrect."}), 403
         
     try:
         cfg = load_config()
