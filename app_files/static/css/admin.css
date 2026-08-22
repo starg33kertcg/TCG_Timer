@@ -39,7 +39,14 @@ header h1 {
     background-color: #394857;
 }
 
-/* Dark Theme */
+/* Header Switch (Signage) */
+.header-switch {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+}
+
+/* Dark Theme overrides */
 body.admin-dashboard-body.dark-theme {
     background-color: #2c3e50;
     color: #ecf0f1;
@@ -54,7 +61,7 @@ body.dark-theme .theme-logout button, body.dark-theme .button-like {
 body.dark-theme .theme-logout button:hover, body.dark-theme .button-like:hover {
     background-color: #4f6478;
 }
-body.dark-theme section {
+body.dark-theme section, body.dark-theme .card {
     background-color: #34495e;
     border: 1px solid #2c3e50;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -68,17 +75,17 @@ body.dark-theme select {
     border: 1px solid #5d6d7e;
 }
 body.dark-theme input::placeholder { color: #95a5a6; }
-body.dark-theme button, body.dark-theme input[type="submit"] {
-    background-color: #4CAF50; /* Green for action buttons */
+body.dark-theme button, body.dark-theme input[type="submit"], body.dark-theme .btn-primary {
+    background-color: #4CAF50; 
     color: white;
 }
-body.dark-theme button:hover, body.dark-theme input[type="submit"]:hover {
+body.dark-theme button:hover, body.dark-theme input[type="submit"]:hover, body.dark-theme .btn-primary:hover {
     background-color: #45a049;
 }
-body.dark-theme button.delete-logo-btn {
-    background-color: #e74c3c; /* Red for delete */
+body.dark-theme button.delete-logo-btn, body.dark-theme .btn-danger {
+    background-color: #e74c3c; 
 }
-body.dark-theme button.delete-logo-btn:hover {
+body.dark-theme button.delete-logo-btn:hover, body.dark-theme .btn-danger:hover {
     background-color: #c0392b;
 }
 body.dark-theme .timer-admin-display {
@@ -86,23 +93,40 @@ body.dark-theme .timer-admin-display {
     border: 1px solid #405261;
 }
 
-
-/* Main Content Area */
-main {
+/* --- GRID LAYOUT --- */
+.dashboard-grid {
     padding: 20px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: 1fr;
     gap: 20px;
 }
+@media (min-width: 1200px) {
+    .dashboard-grid { grid-template-columns: 1fr 1fr; }
+}
 
-section {
+.timers-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+@media (min-width: 800px) {
+    .timers-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.settings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+section, .card {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     border: 1px solid #e0e0e0;
 }
-section h2 {
+section h2, .card h2 {
     margin-top: 0;
     color: #333;
     border-bottom: 1px solid #eee;
@@ -112,7 +136,7 @@ section h2 {
     justify-content: space-between;
     align-items: center;
 }
-body.dark-theme section h2 {
+body.dark-theme section h2, body.dark-theme .card h2 {
     color: #ecf0f1;
     border-bottom: 1px solid #4a5a6a;
 }
@@ -128,25 +152,21 @@ body.dark-theme section h2 {
     border: 1px solid #ced4da;
 }
 
+/* Forms and Inputs */
 fieldset {
     border: 1px solid #ccc;
     padding: 10px 15px;
     margin-bottom: 15px;
     border-radius: 5px;
 }
-body.dark-theme fieldset {
-    border-color: #5d6d7e;
-}
-legend {
-    font-weight: bold;
-    padding: 0 5px;
-}
+body.dark-theme fieldset { border-color: #5d6d7e; }
+legend { font-weight: bold; padding: 0 5px; }
 
 input[type="text"],
 input[type="number"],
 input[type="file"],
 select {
-    width: calc(100% - 22px); /* Full width minus padding/border */
+    width: calc(100% - 22px); 
     padding: 10px;
     margin-bottom: 10px;
     border: 1px solid #ccc;
@@ -154,12 +174,13 @@ select {
     box-sizing: border-box;
 }
 input[type="number"] {
-    width: 60px; /* Smaller for HH, MM, SS */
+    width: 60px;
     margin-right: 5px;
     text-align: right;
 }
 
-button, input[type="submit"] {
+/* Button Classes */
+button, input[type="submit"], .btn-primary {
     background-color: #007bff;
     color: white;
     padding: 10px 15px;
@@ -167,14 +188,29 @@ button, input[type="submit"] {
     border-radius: 4px;
     cursor: pointer;
     font-size: 1em;
-    margin: 5px 2px; /* Small margin around buttons */
+    margin: 5px 2px;
 }
-button:hover, input[type="submit"]:hover {
-    background-color: #0056b3;
-}
+button:hover, input[type="submit"]:hover, .btn-primary:hover { background-color: #0056b3; }
 
-.controls button, .logo-controls button {
-    min-width: 80px; /* Minimum width for action buttons */
+.btn-success { background-color: #2ecc71; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+.btn-success:hover { background-color: #27ae60; }
+
+.btn-warning { background-color: #f1c40f; color: #333; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+.btn-warning:hover { background-color: #f39c12; }
+
+.btn-danger { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+.btn-danger:hover { background-color: #c82333; }
+
+.btn-small { padding: 5px 10px; font-size: 0.8em; }
+
+.controls button, .logo-controls button, .action-buttons button {
+    min-width: 80px;
+}
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
 }
 
 .logo-controls {
@@ -182,15 +218,39 @@ button:hover, input[type="submit"]:hover {
     padding-top: 15px;
     border-top: 1px dashed #ccc;
 }
-body.dark-theme .logo-controls {
-    border-top-color: #5d6d7e;
-}
+body.dark-theme .logo-controls { border-top-color: #5d6d7e; }
 
-.logo-management ul {
-    list-style: none;
-    padding: 0;
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
 }
-.logo-management li {
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s;
+}
+.slider:before {
+    position: absolute; content: "";
+    height: 20px; width: 20px; left: 4px; bottom: 4px;
+    background-color: white; transition: .4s;
+}
+input:checked + .slider { background-color: #4CAF50; }
+input:focus + .slider { box-shadow: 0 0 1px #4CAF50; }
+input:checked + .slider:before { transform: translateX(22px); }
+.slider.round { border-radius: 28px; }
+.slider.round:before { border-radius: 50%; }
+
+/* Info and Alert Texts */
+.info-text { font-size: 0.9em; color: #7f8c8d; font-style: italic; margin-bottom: 15px; }
+.alert-text { color: #c0392b; font-weight: bold; background: #fadbd8; padding: 10px; border-radius: 5px; border-left: 4px solid #c0392b;}
+
+/* Lists */
+.item-list { list-style: none; padding: 0; }
+.item-list li {
     background-color: #f9f9f9;
     padding: 8px 12px;
     border: 1px solid #eee;
@@ -200,134 +260,31 @@ body.dark-theme .logo-controls {
     justify-content: space-between;
     align-items: center;
 }
-body.dark-theme .logo-management li {
+body.dark-theme .item-list li {
     background-color: #4a5a6a;
     border-color: #5d6d7e;
 }
-button.delete-logo-btn {
-    background-color: #dc3545;
-    font-size: 0.8em;
-    padding: 5px 10px;
-}
-button.delete-logo-btn:hover {
-    background-color: #c82333;
-}
 
-/* Toggle Switch */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 50px; /* Smaller switch */
-    height: 28px; /* Smaller switch */
-}
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-}
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 20px; /* Smaller handle */
-    width: 20px;  /* Smaller handle */
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-}
-input:checked + .slider {
-    background-color: #4CAF50; /* Green when on */
-}
-input:focus + .slider {
-    box-shadow: 0 0 1px #4CAF50;
-}
-input:checked + .slider:before {
-    transform: translateX(22px); /* Adjusted for smaller size */
-}
-.slider.round {
-    border-radius: 28px; /* Fully rounded */
-}
-.slider.round:before {
-    border-radius: 50%;
-}
-/* --- PIN Modal Styles --- */
+/* PIN Modal Styles */
 .modal {
-    display: none; 
-    position: fixed; 
-    z-index: 1000; 
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto; 
-    background-color: rgba(0,0,0,0.6); 
+    display: none; position: fixed; z-index: 1000; 
+    left: 0; top: 0; width: 100%; height: 100%;
+    overflow: auto; background-color: rgba(0,0,0,0.6); 
 }
-
 .modal-content {
     background-color: #fefefe;
-    margin: 15% auto; 
-    padding: 20px 30px;
+    margin: 15% auto; padding: 20px 30px;
     border: 1px solid #888;
-    width: 80%;
-    max-width: 400px;
-    border-radius: 8px;
-    position: relative;
+    width: 80%; max-width: 400px;
+    border-radius: 8px; position: relative;
 }
+body.dark-theme .modal-content { background-color: #34495e; border-color: #5d6d7e; }
+.close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; }
+.close-btn:hover, .close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
+body.dark-theme .close-btn:hover, body.dark-theme .close-btn:focus { color: #fff; }
+#change-pin-form label { display: block; margin-top: 15px; font-weight: bold; }
+#change-pin-form input { width: 100%; }
+.status-message { margin-top: 15px; font-weight: bold; }
 
-body.dark-theme .modal-content {
-    background-color: #34495e;
-    border-color: #5d6d7e;
-}
-
-.close-btn {
-    color: #aaa;
-    position: absolute;
-    top: 10px;
-    right: 20px;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-.close-btn:hover,
-.close-btn:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
-}
-body.dark-theme .close-btn:hover, body.dark-theme .close-btn:focus {
-    color: #fff;
-}
-
-#change-pin-form label {
-    display: block;
-    margin-top: 15px;
-    font-weight: bold;
-}
-
-#change-pin-form input {
-    width: 100%; /* Full width within modal */
-}
-
-.status-message {
-    margin-top: 15px;
-    font-weight: bold;
-}
-.form-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-}
-.form-row label:not(.switch) {
-    flex-basis: 200px; /* Adjust as needed */
-    margin-right: 15px;
-}
+.form-row { display: flex; align-items: center; margin-bottom: 15px; }
+.form-row label:not(.switch) { flex-basis: 200px; margin-right: 15px; }
