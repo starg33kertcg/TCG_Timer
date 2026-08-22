@@ -1,21 +1,26 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const wrappers = {
-        '1': document.getElementById('timer-1-wrapper'),
-        '2': document.getElementById('timer-2-wrapper')
-    };
-    const texts = {
-        '1': document.getElementById('timer-1-text'),
-        '2': document.getElementById('timer-2-text')
-    };
-    const logos = {
-        '1': document.getElementById('timer-1-logo'),
-        '2': document.getElementById('timer-2-logo')
-    };
-    const status = { '1': { times_up: false, low_time: false }, '2': { times_up: false, low_time: false } };
+    const appContainer = document.getElementById('app-container');
+    const promoWrapper = document.getElementById('promo-wrapper');
+    const signageOverlay = document.getElementById('signage-overlay');
+    const signageImage = document.getElementById('signage-image');
+    const audioOverlay = document.getElementById('audio-start-overlay');
+
+    const wrappers = {};
+    const texts = {};
+    const logos = {};
+    const status = {};
+    
+    // Scale up to 4 timers
+    for(let i = 1; i <= 4; i++) {
+        wrappers[i] = document.getElementById(`timer-${i}-wrapper`);
+        texts[i] = document.getElementById(`timer-${i}-text`);
+        logos[i] = document.getElementById(`timer-${i}-logo`);
+        status[i] = { times_up: false, low_time: false };
+    }
     
     let sounds = { times_up: null, low_time: null };
     let player = null; 
-    let audioInitialized = false;
+    let audioReady = false;
 
     // --- SYNTHS FOR DEFAULT TONES ---
     const lowTimeSynth = new Tone.PolySynth(Tone.Synth, {
@@ -24,44 +29,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }).toDestination();
 
     const timesUpSynth = new Tone.Synth({
-        oscillator: { type: "square" },
-        envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 }
+        oscillator: { type: "square" }, 
+        envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 } 
     }).toDestination();
 
-    // --- AUDIO START LOGIC ---
-    const overlay = document.getElementById('audio-start-overlay');
-    
-    async function initAudio() {
-        if (overlay) {
-            overlay.style.transition = 'opacity 0.5s'; 
-            overlay.style.opacity = '0';
-            setTimeout(() => { if(overlay) overlay.style.display = 'none'; }, 500);
-        }
-
-        if (audioInitialized) return;
-        
-        try {
+    // Initialize Audio Context via Overlay Click
+    if (audioOverlay) {
+        audioOverlay.addEventListener('click', async () => {
             await Tone.start();
-            console.log('Audio Context Started');
-            audioInitialized = true;
-        } catch (e) {
-            console.warn('Audio Context failed to start:', e);
-        }
+            audioReady = true;
+            console.log('Audio ready');
+            audioOverlay.style.display = 'none';
+        }, { once: true });
     }
-
-    if (overlay) {
-        overlay.addEventListener('click', initAudio);
-        overlay.addEventListener('touchstart', initAudio, {passive: true});
-    }
-    document.body.addEventListener('click', initAudio, { once: true });
-
 
     function play(type) {
-        if (Tone.context.state !== 'running') {
-             Tone.start().catch(() => {});
-             if(Tone.context.state !== 'running') return;
-        }
-        
+        if (!audioReady || Tone.context.state !== 'running') return;
         const url = sounds[type];
         
         if (url) {
@@ -70,16 +53,21 @@ document.addEventListener('DOMContentLoaded', function () {
             player.load(url).then(() => player.start()).catch(e => console.error(e));
         } else {
             const now = Tone.now();
+
             if (type === 'times_up') {
-                const note = "B5"; const speed = 0.12; const gap = 1.2;
-                for (let i = 0; i < 4; i++) {
+                const note = "B5"; 
+                const speed = 0.12; 
+                const gap = 1.2; 
+
+                for (let i = 0; i < 4; i++) { 
                     const start = now + (i * gap);
                     timesUpSynth.triggerAttackRelease(note, "0.05", start);
                     timesUpSynth.triggerAttackRelease(note, "0.05", start + speed);
                     timesUpSynth.triggerAttackRelease(note, "0.05", start + speed*2);
                     timesUpSynth.triggerAttackRelease(note, "0.05", start + speed*3);
                 }
-            } else if (type === 'low_time') {
+            }
+            else if (type === 'low_time') {
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now);
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now + 0.5);
                 lowTimeSynth.triggerAttackRelease("C6", "0.2", now + 1.0);
@@ -91,9 +79,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (seconds < 0) seconds = 0;
         const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
         const pad = (n) => String(n).padStart(2, '0');
-        if (h > 0) return `${pad(h)}h${pad(m)}m${pad(s)}s`;
-        else return `${pad(m)}m${pad(s)}s`;
+        
+        if (h > 0) {
+            return `${pad(h)}h${pad(m)}m${pad(s)}s`;
+        } else {
+            return `${pad(m)}m${pad(s)}s`;
+        }
     }
+
+    let signageIntervalId = null;
+    let currentSignageIndex = 0;
 
     function update(data) {
         const theme = data.theme || {};
@@ -103,8 +98,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (data.background_filename) {
             document.body.style.backgroundImage = `url(/static/backgrounds/${data.background_filename})`;
             document.body.style.backgroundSize = 'cover';
-            document.body.style.backgroundPosition = 'center'; 
-            document.body.style.backgroundAttachment = 'fixed';
         } else {
             document.body.style.backgroundImage = 'none';
         }
@@ -112,20 +105,60 @@ document.addEventListener('DOMContentLoaded', function () {
         sounds.times_up = data.times_up_sound ? `/static/audio/${data.times_up_sound}` : null;
         sounds.low_time = data.low_time_sound ? `/static/audio/${data.low_time_sound}` : null;
 
+        // --- SIGNAGE LOGIC ---
+        if (data.signage && data.signage.enabled && data.signage.images && data.signage.images.length > 0) {
+            appContainer.style.display = 'none';
+            signageOverlay.style.display = 'block';
+
+            if (!signageIntervalId) {
+                signageImage.src = `/static/signage/${data.signage.images[0]}`;
+                signageIntervalId = setInterval(() => {
+                    currentSignageIndex = (currentSignageIndex + 1) % data.signage.images.length;
+                    signageImage.src = `/static/signage/${data.signage.images[currentSignageIndex]}`;
+                }, (data.signage.interval_seconds || 15) * 1000);
+            }
+            return; 
+        } else {
+            signageOverlay.style.display = 'none';
+            if (signageIntervalId) {
+                clearInterval(signageIntervalId);
+                signageIntervalId = null;
+            }
+        }
+
+        // --- ACTIVE TIMERS CALCULATION ---
+        let activeCount = 0;
+        Object.keys(data.timers).forEach(id => {
+            if (data.timers[id].enabled) activeCount++;
+        });
+
+        appContainer.style.display = 'grid';
+        appContainer.className = 'timer-container';
+        if (activeCount === 1) appContainer.classList.add('layout-1');
+        else if (activeCount === 2) appContainer.classList.add('layout-2');
+        else if (activeCount >= 3) appContainer.classList.add('layout-4'); // Use 2x2 grid
+
+        // --- PROMO GRAPHIC LOGIC ---
+        if (activeCount === 3 && data.promo_graphic_filename) {
+            promoWrapper.style.display = 'block';
+            promoWrapper.style.backgroundImage = `url(/static/promo/${data.promo_graphic_filename})`;
+        } else {
+            promoWrapper.style.display = 'none';
+        }
+
+        // --- TIMERS UPDATE LOGIC ---
         Object.keys(data.timers).forEach(id => {
             if (!wrappers[id]) return;
             const t = data.timers[id];
-            
-            // Set display based on enabled state
             wrappers[id].style.display = t.enabled ? 'flex' : 'none';
             if (!t.enabled) return;
 
             const el = texts[id];
             
-            // Times Up
             if (t.times_up) {
                 el.textContent = "TIME'S UP";
                 el.style.color = theme.low_time_color || theme.font_color || '#FF0000';
+                
                 if (!status[id].times_up) {
                     if (theme.warning_enabled !== false) play('times_up');
                     el.classList.add('times-up'); 
@@ -133,45 +166,29 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 el.textContent = format(t.time_remaining_seconds);
                 el.classList.remove('times-up');
-                
+
                 const low = t.is_running && t.time_remaining_seconds <= (theme.low_time_minutes||5)*60;
+                
                 if (low) {
                     el.style.color = theme.low_time_color || '#FF0000';
                     if (!status[id].low_time) {
                         if (theme.warning_enabled !== false) play('low_time');
+                        el.classList.add('low-time');
                     }
                 } else {
                     el.style.color = theme.font_color || '#FFFFFF'; 
+                    el.classList.remove('low-time');
                 }
                 status[id].low_time = low;
             }
             
             status[id].times_up = t.times_up;
-            if (t.logo_filename) { logos[id].src = `/static/uploads/${t.logo_filename}`; logos[id].style.display = 'block'; }
-            else logos[id].style.display = 'none';
             
-        });
-        
-        adjustLayout();
-    }
-
-    function adjustLayout() {
-        let visibleTimers = 0;
-        Object.values(wrappers).forEach(container => {
-            if (container && container.style.display !== 'none') {
-                visibleTimers++;
-            }
-        });
-
-        Object.values(wrappers).forEach(container => {
-            if (!container) return;
-            container.classList.remove('single-active', 'dual-active');
-            if (container.style.display !== 'none') {
-                 if (visibleTimers === 1) {
-                    container.classList.add('single-active');
-                } else if (visibleTimers === 2) {
-                    container.classList.add('dual-active');
-                }
+            if (t.logo_filename) { 
+                logos[id].src = `/static/uploads/${t.logo_filename}`; 
+                logos[id].style.display = 'block'; 
+            } else {
+                logos[id].style.display = 'none';
             }
         });
     }
