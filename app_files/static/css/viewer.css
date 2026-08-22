@@ -29,6 +29,7 @@ body, html {
 .layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
 .layout-2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
 .layout-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
 .timer-wrapper {
     background: transparent; 
     border-radius: 20px;
