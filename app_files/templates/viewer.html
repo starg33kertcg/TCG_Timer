@@ -8,27 +8,33 @@
     <script src="https://cdn.jsdelivr.net/npm/tone@14.9.14/build/Tone.min.js"></script>
 </head>
 <body>
-    <!-- Audio Start Overlay -->
-    <div id="audio-start-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); color: white; display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer;">
+    <!-- Audio Overlay -->
+    <div id="audio-start-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: white; display: flex; justify-content: center; align-items: center; z-index: 2000; cursor: pointer;">
         <div style="text-align: center;">
-            <h1 style="font-size: 3em; margin-bottom: 20px;">Click to Enable Sound</h1>
-            <p>Browser policy requires interaction to play audio.</p>
+            <h1 style="font-size: 4em; margin-bottom: 20px;">🔊 Click Anywhere to Enable Audio</h1>
+            <p style="font-size: 1.5em; color: #ccc;">Modern browsers require interaction before sounds can play.</p>
         </div>
     </div>
 
-    <div class="timer-container" id="app-container">
-        <!-- Timer 1 Wrapper -->
-        <div id="timer-1-wrapper" class="timer-wrapper" style="display:none;">
-            <img id="timer-1-logo" class="logo-img" src="#" alt="Timer 1 Logo" style="display:none;">
-            <div id="timer-1-text" class="timer-text">00:00:00</div>
-        </div>
-        
-        <!-- Timer 2 Wrapper -->
-        <div id="timer-2-wrapper" class="timer-wrapper" style="display:none;">
-            <img id="timer-2-logo" class="logo-img" src="#" alt="Timer 2 Logo" style="display:none;">
-            <div id="timer-2-text" class="timer-text">00:00:00</div>
-        </div>
+    <!-- Signage Overlay -->
+    <div id="signage-overlay">
+        <img id="signage-image" src="" alt="Signage">
     </div>
+
+    <!-- Application Container -->
+    <div class="timer-container" id="app-container">
+        <!-- Generates 4 timer blocks -->
+        {% for i in range(1, 5) %}
+        <div id="timer-{{ i }}-wrapper" class="timer-wrapper" style="display:none;">
+            <img id="timer-{{ i }}-logo" class="logo-img" src="#" style="display:none;">
+            <div id="timer-{{ i }}-text" class="timer-text">00:00:00</div>
+        </div>
+        {% endfor %}
+        
+        <!-- Promo Graphic Block (Used if exactly 3 timers are active) -->
+        <div id="promo-wrapper" class="promo-wrapper" style="display:none;"></div>
+    </div>
+    
     <script src="{{ url_for('static', filename='js/viewer.js') }}"></script>
 </body>
 </html>
