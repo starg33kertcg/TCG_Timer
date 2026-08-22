@@ -26,12 +26,12 @@
         <!-- Generates 4 timer blocks -->
         {% for i in range(1, 5) %}
         <div id="timer-{{ i }}-wrapper" class="timer-wrapper" style="display:none;">
-            <img id="timer-{{ i }}-logo" class="logo-img" src="#" style="display:none;">
+            <img id="timer-{{ i }}-logo" class="logo-img" style="display:none;">
             <div id="timer-{{ i }}-text" class="timer-text">00:00:00</div>
         </div>
         {% endfor %}
         
-        <!-- Promo Graphic Block (Used if exactly 3 timers are active) -->
+        <!-- Promo Graphic Block -->
         <div id="promo-wrapper" class="promo-wrapper" style="display:none;"></div>
     </div>
     
