@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const logos = {};
     const status = {};
     
-    // Scale up to 4 timers
     for(let i = 1; i <= 4; i++) {
         wrappers[i] = document.getElementById(`timer-${i}-wrapper`);
         texts[i] = document.getElementById(`timer-${i}-text`);
@@ -22,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
     let player = null; 
     let audioReady = false;
 
-    // --- SYNTHS FOR DEFAULT TONES ---
     const lowTimeSynth = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.01, decay: 0.3, sustain: 0.0, release: 1 }
@@ -33,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
         envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 } 
     }).toDestination();
 
-    // Initialize Audio Context via Overlay Click
     if (audioOverlay) {
         audioOverlay.addEventListener('click', async () => {
             await Tone.start();
@@ -53,12 +50,10 @@ document.addEventListener('DOMContentLoaded', function () {
             player.load(url).then(() => player.start()).catch(e => console.error(e));
         } else {
             const now = Tone.now();
-
             if (type === 'times_up') {
                 const note = "B5"; 
                 const speed = 0.12; 
                 const gap = 1.2; 
-
                 for (let i = 0; i < 4; i++) { 
                     const start = now + (i * gap);
                     timesUpSynth.triggerAttackRelease(note, "0.05", start);
@@ -79,16 +74,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (seconds < 0) seconds = 0;
         const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
         const pad = (n) => String(n).padStart(2, '0');
-        
-        if (h > 0) {
-            return `${pad(h)}h${pad(m)}m${pad(s)}s`;
-        } else {
-            return `${pad(m)}m${pad(s)}s`;
-        }
+        if (h > 0) return `${pad(h)}h${pad(m)}m${pad(s)}s`;
+        else return `${pad(m)}m${pad(s)}s`;
     }
 
     let signageIntervalId = null;
     let currentSignageIndex = 0;
+    
+    let activeSignageImages = []; 
 
     function update(data) {
         const theme = data.theme || {};
@@ -109,12 +102,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if (data.signage && data.signage.enabled && data.signage.images && data.signage.images.length > 0) {
             appContainer.style.display = 'none';
             signageOverlay.style.display = 'block';
+            
+            // Update the global array for the interval to reference
+            activeSignageImages = data.signage.images;
 
             if (!signageIntervalId) {
-                signageImage.src = `/static/signage/${data.signage.images[0]}`;
+                signageImage.src = `/static/signage/${activeSignageImages[0]}`;
                 signageIntervalId = setInterval(() => {
-                    currentSignageIndex = (currentSignageIndex + 1) % data.signage.images.length;
-                    signageImage.src = `/static/signage/${data.signage.images[currentSignageIndex]}`;
+                    if (activeSignageImages.length > 0) {
+                        currentSignageIndex = (currentSignageIndex + 1) % activeSignageImages.length;
+                        signageImage.src = `/static/signage/${activeSignageImages[currentSignageIndex]}`;
+                    }
                 }, (data.signage.interval_seconds || 15) * 1000);
             }
             return; 
@@ -136,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function () {
         appContainer.className = 'timer-container';
         if (activeCount === 1) appContainer.classList.add('layout-1');
         else if (activeCount === 2) appContainer.classList.add('layout-2');
-        else if (activeCount >= 3) appContainer.classList.add('layout-4'); // Use 2x2 grid
+        else if (activeCount >= 3) appContainer.classList.add('layout-4'); 
 
         // --- PROMO GRAPHIC LOGIC ---
         if (activeCount === 3 && data.promo_graphic_filename) {
