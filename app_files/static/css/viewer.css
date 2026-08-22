@@ -1,5 +1,3 @@
-/* In app_files/static/css/viewer.css */
-
 html {
     box-sizing: border-box;
 }
@@ -17,86 +15,98 @@ body, html {
     overflow: hidden; 
 }
 
+/* 
+  The Grid Container: 
+  JS will add .layout-1, .layout-2, or .layout-4 depending on active timers.
+*/
 .timer-container {
-    display: flex;
-    justify-content: center; 
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    padding-left: 1.5vw;  
-    padding-right: 1.5vw; 
+    display: grid;
+    width: 100vw;
+    height: 100vh;
+    padding: 2vw;
+    box-sizing: border-box;
+    gap: 2vw; /* Consistent gap between all timers */
 }
 
+/* Dynamic Grid Layouts */
+.layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.layout-2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+.layout-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
 .timer-wrapper {
-    display: flex; 
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 20px;
+    display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
-    flex-grow: 1; 
-    flex-basis: 0; 
-    height: 100%; 
-    padding: 10px; 
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+    width: 100%;
+    height: 100%;
 }
 
-.timer-wrapper.single-active { 
-    width: 100%; 
+.promo-wrapper {
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: transparent;
+    box-shadow: none;
+    width: 100%;
+    height: 100%;
 }
 
-.timer-wrapper.dual-active {
-    width: 49%; 
-}
-
-#timer-1-wrapper.dual-active {
-    margin-right: 0.5%; /* Creates half of a 1% gap between timers */
-}
-
-#timer-2-wrapper.dual-active {
-    margin-left: 0.5%;  /* Creates the other half of a 1% gap */
-}
-
-.logo-img {
-    max-height: 25vh;
+.logo-img { 
+    max-height: 25vh; 
     max-width: 90%; 
-    margin-bottom: 3vh;
-    object-fit: contain;
+    margin-bottom: 3vh; 
+    object-fit: contain; 
 }
 
-.timer-text {
-    font-size: min(18vh, 9vw); 
-    font-weight: bold;
-    line-height: 1;
+.timer-text { 
+    font-size: 15vw; 
+    font-weight: bold; 
+    line-height: 1; 
+    transition: color 0.3s; 
     white-space: nowrap;
 }
 
-.timer-wrapper.dual-active .timer-text {
-    font-size: min(12vh, 6vw); 
+/* Scale text down slightly when there are 2 timers */
+.layout-2 .timer-text { 
+    font-size: min(12vh, 8vw); 
 }
 
-.timer-text.timer-text-mm-ss {
-    font-size: min(22vh, 13vw); 
-}
-
-.timer-wrapper.dual-active .timer-text.timer-text-mm-ss {
-    font-size: min(15vh, 8vw); 
-}
-
-.low-time-warning { 
-    color: red;
+/* Scale text down further when there are 3 or 4 quadrants active */
+.layout-4 .timer-text { 
+    font-size: min(10vh, 7vw); 
 }
 
 .timer-text.times-up {
     color: #FF0000;
-    font-weight: bold;
 }
 
-/* Animations */
-@keyframes flash-red {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+/* Signage Overlay Mode */
+#signage-overlay {
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh;
+    background-color: black;
+    z-index: 1000;
+    display: none;
 }
 
-.times-up {
-    animation: flash-red 1s infinite;
+#signage-image {
+    width: 100%; 
+    height: 100%; 
+    object-fit: contain;
+    animation: fadein 1s ease-in-out;
+}
+
+@keyframes fadein { 
+    from { opacity: 0; } 
+    to { opacity: 1; } 
 }
