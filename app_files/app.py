@@ -10,7 +10,6 @@ from functools import wraps
 
 app = Flask(__name__)
 # For this setup, a new key is generated each time the service starts.
-# This means login sessions will not survive a service restart.
 app.secret_key = os.urandom(32)
 
 # --- File paths ---
@@ -18,10 +17,14 @@ CONFIG_FILE = 'config.json'
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
 AUDIO_FOLDER = os.path.join('static', 'audio')
 BACKGROUNDS_FOLDER = os.path.join('static', 'backgrounds')
+SIGNAGE_FOLDER = os.path.join('static', 'signage')
+PROMO_FOLDER = os.path.join('static', 'promo')
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['AUDIO_FOLDER'] = AUDIO_FOLDER
 app.config['BACKGROUNDS_FOLDER'] = BACKGROUNDS_FOLDER
+app.config['SIGNAGE_FOLDER'] = SIGNAGE_FOLDER
+app.config['PROMO_FOLDER'] = PROMO_FOLDER
 
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 ALLOWED_AUDIO_EXTENSIONS = {'mp3', 'wav', 'ogg'}
@@ -29,7 +32,9 @@ ALLOWED_AUDIO_EXTENSIONS = {'mp3', 'wav', 'ogg'}
 # --- In-Memory State ---
 timer_data = {
     "1": {"id": "1", "label": "Timer 1", "enabled": False, "end_time_utc_iso": None, "paused_time_remaining_seconds": None, "is_running": False, "initial_duration_seconds": 0, "logo_filename": None},
-    "2": {"id": "2", "label": "Timer 2", "enabled": False, "end_time_utc_iso": None, "paused_time_remaining_seconds": None, "is_running": False, "initial_duration_seconds": 0, "logo_filename": None}
+    "2": {"id": "2", "label": "Timer 2", "enabled": False, "end_time_utc_iso": None, "paused_time_remaining_seconds": None, "is_running": False, "initial_duration_seconds": 0, "logo_filename": None},
+    "3": {"id": "3", "label": "Timer 3", "enabled": False, "end_time_utc_iso": None, "paused_time_remaining_seconds": None, "is_running": False, "initial_duration_seconds": 0, "logo_filename": None},
+    "4": {"id": "4", "label": "Timer 4", "enabled": False, "end_time_utc_iso": None, "paused_time_remaining_seconds": None, "is_running": False, "initial_duration_seconds": 0, "logo_filename": None}
 }
 
 # --- Utility Functions ---
@@ -42,12 +47,11 @@ def generate_unique_filename(filename, folder_name):
     return secure_filename(f"{folder_name}_{unique_id}{extension}")
 
 def save_config(data_to_save):
-    """Saves the configuration dictionary to config.json."""
     with open(CONFIG_FILE, 'w') as f:
         json.dump(data_to_save, f, indent=4)
 
 def load_config():
-    """Loads config.json, handling initial PIN hashing and adding theme defaults."""
+    """Loads config.json, handling initial PIN hashing and adding new defaults."""
     default_config = {
         "logos": [],
         "theme": {
@@ -59,11 +63,16 @@ def load_config():
         },
         "custom_background_filename": None,
         "times_up_sound_filename": None,
-        "low_time_sound_filename": None
+        "low_time_sound_filename": None,
+        "promo_graphic_filename": None,
+        "signage": {
+            "enabled": False,
+            "interval_seconds": 15,
+            "images": []
+        }
     }
     
     if not os.path.exists(CONFIG_FILE):
-        # If no config exists, creating one (usually setup.sh handles this, but safe fallback)
         save_config(default_config)
         return default_config
 
@@ -81,11 +90,7 @@ def load_config():
                 del config_data["admin_pin_unhashed"]
                 updated = True
 
-            # Merge defaults to ensure new keys are always present
-            # We copy default_config and update it with loaded data to ensure structure
-            # However, we must be careful not to overwrite nested theme dicts completely if partial keys exist
-            
-            # Simple merge strategy: ensure top level keys exist
+            # Merge defaults for base keys
             for key, value in default_config.items():
                 if key not in config_data:
                     config_data[key] = value
@@ -97,9 +102,13 @@ def load_config():
                     if key not in config_data["theme"]:
                         config_data["theme"][key] = value
                         updated = True
-            else:
-                config_data["theme"] = default_config["theme"]
-                updated = True
+            
+            # Specific nested merge for signage
+            if "signage" in config_data:
+                for key, value in default_config["signage"].items():
+                    if key not in config_data["signage"]:
+                        config_data["signage"][key] = value
+                        updated = True
 
             if updated:
                 f.seek(0)
@@ -112,16 +121,13 @@ def load_config():
 
 # --- Authentication ---
 def check_pin(submitted_pin):
-    """Verifies a submitted PIN against the hashed PIN in config.json."""
     current_config = load_config()
     if not current_config.get("admin_pin_hashed"):
-        app.logger.error("Admin PIN not found in config.")
         return False
     try:
         salt, stored_hash = current_config["admin_pin_hashed"].split('$')
         return hashlib.sha256((salt + submitted_pin).encode('utf-8')).hexdigest() == stored_hash
-    except (ValueError, AttributeError):
-        app.logger.error("Admin PIN format error in config.")
+    except:
         return False
 
 def login_required(f):
@@ -133,7 +139,6 @@ def login_required(f):
     return decorated_function
 
 # --- Core Routes ---
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if session.get('admin_logged_in'):
@@ -177,8 +182,13 @@ def serve_audio(filename): return send_from_directory(app.config['AUDIO_FOLDER']
 @app.route('/static/backgrounds/<filename>')
 def serve_background(filename): return send_from_directory(app.config['BACKGROUNDS_FOLDER'], filename)
 
-# --- API Routes ---
+@app.route('/static/signage/<filename>')
+def serve_signage(filename): return send_from_directory(app.config['SIGNAGE_FOLDER'], filename)
 
+@app.route('/static/promo/<filename>')
+def serve_promo(filename): return send_from_directory(app.config['PROMO_FOLDER'], filename)
+
+# --- API Routes ---
 @app.route('/api/timer_status', methods=['GET'])
 def get_timer_status_api():
     timers_response = {}
@@ -207,7 +217,9 @@ def get_timer_status_api():
         'theme': current_config.get('theme', {}),
         'background_filename': current_config.get('custom_background_filename'),
         'times_up_sound': current_config.get('times_up_sound_filename'),
-        'low_time_sound': current_config.get('low_time_sound_filename')
+        'low_time_sound': current_config.get('low_time_sound_filename'),
+        'promo_graphic_filename': current_config.get('promo_graphic_filename'),
+        'signage': current_config.get('signage', {})
     })
 
 @app.route('/api/control_timer/<timer_id>', methods=['POST'])
@@ -247,113 +259,142 @@ def control_timer_api(timer_id):
         td["logo_filename"] = payload.get('logo_filename')
     return jsonify({"message": f"Timer {timer_id} action {action} processed", "newState": td})
 
-# --- Upload Handlers ---
-@app.route('/api/upload_logo', methods=['POST'])
+# --- Centralized Upload Handlers ---
+@app.route('/api/upload_<file_type>', methods=['POST'])
 @login_required
-def upload_logo_api():
-    if 'logo_file' not in request.files: return jsonify({"error": "No file part"}), 400
-    file = request.files['logo_file']; common_name = request.form.get('common_name', '').strip()
-    if file and allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
-        fname = generate_unique_filename(file.filename, 'logo')
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
+def handle_uploads(file_type):
+    file_map = {
+        'logo': ('logo_file', ALLOWED_IMAGE_EXTENSIONS, app.config['UPLOAD_FOLDER'], 'logos'),
+        'background': ('background_file', ALLOWED_IMAGE_EXTENSIONS, app.config['BACKGROUNDS_FOLDER'], 'custom_background_filename'),
+        'promo': ('promo_file', ALLOWED_IMAGE_EXTENSIONS, app.config['PROMO_FOLDER'], 'promo_graphic_filename'),
+        'times_up_sound': ('sound_file', ALLOWED_AUDIO_EXTENSIONS, app.config['AUDIO_FOLDER'], 'times_up_sound_filename'),
+        'low_time_sound': ('sound_file', ALLOWED_AUDIO_EXTENSIONS, app.config['AUDIO_FOLDER'], 'low_time_sound_filename')
+    }
+    
+    if file_type not in file_map: 
+        return jsonify({"error": "Invalid type"}), 400
+        
+    input_name, extensions, folder, config_key = file_map[file_type]
+    if input_name not in request.files: 
+        return jsonify({"error": "No file uploaded"}), 400
+        
+    file = request.files[input_name]
+    if file and allowed_file(file.filename, extensions):
+        fname = generate_unique_filename(file.filename, file_type)
+        file.save(os.path.join(folder, fname))
         cfg = load_config()
-        cfg.setdefault('logos', []).append({"name": common_name, "filename": fname})
+        
+        if file_type == 'logo':
+            common_name = request.form.get('common_name', '').strip()
+            cfg.setdefault('logos', []).append({"name": common_name, "filename": fname})
+        else:
+            old_file = cfg.get(config_key)
+            if old_file:
+                try: os.remove(os.path.join(folder, old_file))
+                except: pass
+            cfg[config_key] = fname
+            
         save_config(cfg)
-        return jsonify({"message": "Uploaded", "logo": {"name": common_name, "filename": fname}})
-    return jsonify({"error": "Upload failed"}), 400
+        return jsonify({"message": "Uploaded successfully", "filename": fname})
+    return jsonify({"error": "Invalid file extension"}), 400
 
-@app.route('/api/get_logos', methods=['GET'])
+# --- Centralized Delete Handlers ---
+@app.route('/api/delete_<file_type>', methods=['DELETE'])
+@app.route('/api/delete_<file_type>/<filename>', methods=['DELETE'])
 @login_required
-def get_logos_api(): return jsonify(load_config().get('logos', []))
+def handle_deletes(file_type, filename=None):
+    cfg = load_config()
+    if file_type == 'logo' and filename:
+        cfg['logos'] = [l for l in cfg.get('logos',[]) if l['filename'] != filename]
+        try: os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        except: pass
+    elif file_type in ['background', 'promo', 'times_up_sound', 'low_time_sound']:
+        key_map = {'background': 'custom_background_filename', 'promo': 'promo_graphic_filename', 'times_up_sound': 'times_up_sound_filename', 'low_time_sound': 'low_time_sound_filename'}
+        folder_map = {'background': app.config['BACKGROUNDS_FOLDER'], 'promo': app.config['PROMO_FOLDER'], 'times_up_sound': app.config['AUDIO_FOLDER'], 'low_time_sound': app.config['AUDIO_FOLDER']}
+        old_file = cfg.get(key_map[file_type])
+        if old_file:
+            try: os.remove(os.path.join(folder_map[file_type], old_file))
+            except: pass
+            cfg[key_map[file_type]] = None
+            
+    save_config(cfg)
+    return jsonify({"message": "Deleted successfully"})
 
-@app.route('/api/delete_logo/<filename>', methods=['DELETE'])
+# --- Digital Signage Settings ---
+@app.route('/api/signage', methods=['POST'])
 @login_required
-def delete_logo_api(filename):
-    cfg = load_config(); cfg['logos'] = [l for l in cfg.get('logos',[]) if l['filename'] != filename]; save_config(cfg)
-    try: os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    except: pass
+def signage_settings():
+    cfg = load_config()
+    data = request.get_json()
+    if 'enabled' in data: 
+        cfg['signage']['enabled'] = data['enabled']
+    if 'interval_seconds' in data: 
+        cfg['signage']['interval_seconds'] = int(data['interval_seconds'])
+    save_config(cfg)
+    return jsonify({"message": "Signage settings updated"})
+
+@app.route('/api/upload_signage', methods=['POST'])
+@login_required
+def upload_signage():
+    if 'signage_file' not in request.files: return jsonify({"error": "No file"}), 400
+    file = request.files['signage_file']
+    if file and allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
+        fname = generate_unique_filename(file.filename, 'signage')
+        file.save(os.path.join(app.config['SIGNAGE_FOLDER'], fname))
+        cfg = load_config()
+        cfg['signage']['images'].append(fname)
+        save_config(cfg)
+        return jsonify({"message": "Uploaded", "filename": fname})
+    return jsonify({"error": "Invalid file"}), 400
+
+@app.route('/api/delete_signage/<filename>', methods=['DELETE'])
+@login_required
+def delete_signage(filename):
+    cfg = load_config()
+    if filename in cfg['signage']['images']:
+        cfg['signage']['images'].remove(filename)
+        try: os.remove(os.path.join(app.config['SIGNAGE_FOLDER'], filename))
+        except: pass
+        save_config(cfg)
     return jsonify({"message": "Deleted"})
 
+# --- Theme & PIN Management ---
 @app.route('/api/theme', methods=['GET', 'POST'])
 @login_required
 def theme_api():
     cfg = load_config()
     if request.method == 'POST':
-        cfg['theme'] = request.get_json(); save_config(cfg)
-        return jsonify({"message": "Saved"})
+        cfg['theme'] = request.get_json()
+        save_config(cfg)
+        return jsonify({"message": "Theme saved"})
     return jsonify(cfg.get('theme', {}))
-
-@app.route('/api/upload_background', methods=['POST'])
-@login_required
-def upload_bg():
-    if 'background_file' not in request.files: return jsonify({"error": "No file"}), 400
-    file = request.files['background_file']
-    if file and allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
-        fname = generate_unique_filename(file.filename, 'bg')
-        file.save(os.path.join(app.config['BACKGROUNDS_FOLDER'], fname))
-        cfg = load_config()
-        if cfg.get('custom_background_filename'):
-            try: os.remove(os.path.join(app.config['BACKGROUNDS_FOLDER'], cfg['custom_background_filename']))
-            except: pass
-        cfg['custom_background_filename'] = fname; save_config(cfg)
-        return jsonify({"message": "Background Set", "filename": fname})
-    return jsonify({"error": "Invalid file"}), 400
-
-@app.route('/api/delete_background', methods=['DELETE'])
-@login_required
-def delete_bg():
-    cfg = load_config(); fname = cfg.get('custom_background_filename')
-    if fname:
-        try: os.remove(os.path.join(app.config['BACKGROUNDS_FOLDER'], fname))
-        except: pass
-        cfg['custom_background_filename'] = None; save_config(cfg)
-    return jsonify({"message": "Deleted"})
-
-@app.route('/api/upload_sound/<stype>', methods=['POST'])
-@login_required
-def upload_sound(stype):
-    if stype not in ['times_up', 'low_time']: return jsonify({"error": "Invalid type"}), 400
-    if 'sound_file' not in request.files: return jsonify({"error": "No file"}), 400
-    file = request.files['sound_file']
-    if file and allowed_file(file.filename, ALLOWED_AUDIO_EXTENSIONS):
-        fname = generate_unique_filename(file.filename, stype)
-        file.save(os.path.join(app.config['AUDIO_FOLDER'], fname))
-        cfg = load_config(); key = f'{stype}_sound_filename'
-        if cfg.get(key):
-            try: os.remove(os.path.join(app.config['AUDIO_FOLDER'], cfg[key]))
-            except: pass
-        cfg[key] = fname; save_config(cfg)
-        return jsonify({"message": "Sound Set", "filename": fname})
-    return jsonify({"error": "Invalid file"}), 400
-
-@app.route('/api/delete_sound/<stype>', methods=['DELETE'])
-@login_required
-def delete_sound(stype):
-    cfg = load_config(); key = f'{stype}_sound_filename'; fname = cfg.get(key)
-    if fname:
-        try: os.remove(os.path.join(app.config['AUDIO_FOLDER'], fname))
-        except: pass
-        cfg[key] = None; save_config(cfg)
-    return jsonify({"message": "Deleted"})
 
 @app.route('/api/change_pin', methods=['POST'])
 @login_required
 def change_pin_api():
-    data = request.get_json(); current_pin = data.get('current_pin'); new_pin = data.get('new_pin')
+    data = request.get_json()
+    current_pin = data.get('current_pin')
+    new_pin = data.get('new_pin')
+    
     if not all([current_pin, new_pin]) or not current_pin.isdigit() or not new_pin.isdigit() or len(new_pin) != 5:
         return jsonify({"error": "PINs must be 5 numerical digits."}), 400
-    if not check_pin(current_pin): return jsonify({"error": "Current PIN is incorrect."}), 403
+        
+    if not check_pin(current_pin): 
+        return jsonify({"error": "Current PIN is incorrect."}), 403
+        
     try:
-        current_config = load_config(); salt = os.urandom(16).hex()
+        cfg = load_config()
+        salt = os.urandom(16).hex()
         hashed_pin = hashlib.sha256((salt + new_pin).encode('utf-8')).hexdigest()
-        current_config["admin_pin_hashed"] = f"{salt}${hashed_pin}"; save_config(current_config)
+        cfg["admin_pin_hashed"] = f"{salt}${hashed_pin}"
+        save_config(cfg)
         return jsonify({"message": "PIN changed successfully!"})
     except Exception as e:
         app.logger.error(f"Error changing PIN: {e}")
         return jsonify({"error": "An internal error occurred."}), 500
 
 if __name__ == '__main__':
-    for f in [UPLOAD_FOLDER, AUDIO_FOLDER, BACKGROUNDS_FOLDER]:
+    for f in [UPLOAD_FOLDER, AUDIO_FOLDER, BACKGROUNDS_FOLDER, SIGNAGE_FOLDER, PROMO_FOLDER]:
         os.makedirs(f, exist_ok=True)
     load_config()
     serve(app, host='0.0.0.0', port=5000)
