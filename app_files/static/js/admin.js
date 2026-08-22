@@ -32,12 +32,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    const activeTabTarget = localStorage.getItem('activeAdminTab') || 'tab-logos';
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn.dataset.target === activeTabTarget) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(c => {
+        if (c.id === activeTabTarget) c.classList.add('active');
+        else c.classList.remove('active');
+    });
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             this.classList.add('active');
             document.getElementById(this.dataset.target).classList.add('active');
+            localStorage.setItem('activeAdminTab', this.dataset.target); 
         });
     });
 
@@ -95,12 +107,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (enableToggle) {
             enableToggle.addEventListener('change', async function() {
-                let timeRem = 0;
+                let totalSetTime = 0;
                 if (currentTimerState[timerId]) {
-                    timeRem = currentTimerState[timerId].time_remaining_seconds;
+                    const tState = currentTimerState[timerId];
+                    totalSetTime = tState.paused_time_remaining_seconds !== null ? tState.paused_time_remaining_seconds : tState.initial_duration_seconds;
                 }
                 
-                if (this.checked && timeRem <= 0) {
+                if (this.checked && totalSetTime <= 0) {
                     alert("Please set a time greater than 0 before enabling this timer.");
                     this.checked = false;
                     return;
@@ -201,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function () {
         bgForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const res = await handleNewUpload('/api/upload_background', new FormData(this));
-            if (res.success) { alert(res.data.message); document.getElementById('current-bg-name').textContent = res.data.filename; document.getElementById('delete-background-btn').style.display = 'inline-block'; this.reset(); }
+            if (res.success) { alert(res.data.message); location.reload(); }
             else alert("Error: " + res.error);
         });
     }
@@ -212,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const res = await handleNewUpload(`/api/upload_sound/${type}`, new FormData(this));
-            if (res.success) { alert(res.data.message); document.getElementById(`current-${type}-sound`).textContent = res.data.filename; document.getElementById(`delete-${type}-sound-btn`).style.display = 'inline-block'; this.reset(); }
+            if (res.success) { alert(res.data.message); location.reload(); }
             else alert("Error: " + res.error);
         });
     });
@@ -236,19 +249,13 @@ document.addEventListener('DOMContentLoaded', function () {
     setupDeleteButton('delete-times-up-sound-btn', '/api/delete_times_up_sound', 'Sound removed.');
     setupDeleteButton('delete-low-time-sound-btn', '/api/delete_low_time_sound', 'Sound removed.');
 
-
-    // --- PROMO & SIGNAGE LOGIC ---
     const promoForm = document.getElementById('upload-promo-form');
     if (promoForm) {
         promoForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const res = await handleNewUpload('/api/upload_promo', new FormData(this));
-            if (res.success) { 
-                alert(res.data.message); 
-                document.getElementById('current-promo-name').textContent = res.data.filename; 
-                document.getElementById('delete-promo-btn').style.display = 'inline-block'; 
-                this.reset(); 
-            } else alert("Error: " + res.error);
+            if (res.success) { alert(res.data.message); location.reload(); } 
+            else alert("Error: " + res.error);
         });
     }
 
@@ -287,7 +294,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // --- REORDER SIGNAGE LOGIC ---
     document.querySelectorAll('.move-up-btn, .move-down-btn').forEach(btn => {
         btn.addEventListener('click', async function(e) {
             e.preventDefault();
@@ -303,7 +309,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // --- ADMIN TIME FORMATTING & FETCHING ---
     function formatAdminTime(totalSeconds) {
         if (totalSeconds < 0) totalSeconds = 0;
         const h = Math.floor(totalSeconds / 3600);
@@ -350,7 +355,6 @@ document.addEventListener('DOMContentLoaded', function () {
     fetchAndUpdateAdminTimerDisplays(); 
     setInterval(fetchAndUpdateAdminTimerDisplays, 2000); 
     
-    // --- PIN Management ---
     const changePinBtn = document.getElementById('change-pin-btn');
     const changePinModal = document.getElementById('change-pin-modal');
     const closeBtn = document.querySelector('.close-btn');
