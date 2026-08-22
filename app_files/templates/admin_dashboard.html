@@ -10,149 +10,175 @@
     <header>
         <h1>TCG Timer Admin</h1>
         <div class="theme-logout">
-            <!-- No Open Viewer button for Linux usually, unless you want to link to "/" -->
+            <label class="switch header-switch" title="Toggle Digital Signage Mode">
+                <input type="checkbox" id="toggle-signage-global" {% if config.signage.enabled %}checked{% endif %}>
+                <span class="slider round"></span> <span style="margin-left:50px; font-weight:bold;">Signage Mode</span>
+            </label>
             <button id="theme-toggle">Toggle Theme</button>
             <button id="change-pin-btn">Change PIN</button>
             <a href="{{ url_for('logout') }}" class="button-like">Logout</a>
         </div>
     </header>
 
-    <main>
-        {% for timer_id, timer_details in timers_status.items() %}
-        <section class="timer-control-section" id="timer-{{ timer_id }}-section">
-            <h2>{{ timer_details.label }}
-                <label class="switch">
-                    <input type="checkbox" id="enable-timer-{{ timer_id }}" {% if timer_details.enabled %}checked{% endif %}>
-                    <span class="slider round"></span>
-                </label>
-            </h2>
-            <div class="timer-admin-display" id="admin-timer-{{ timer_id }}-display">00h00m00s</div>
-            <div class="controls">
-                <fieldset>
-                    <legend>Set Time</legend>
-                    <input type="number" id="hours-{{ timer_id }}" placeholder="HH" min="0" max="99" value="0">h
-                    <input type="number" id="minutes-{{ timer_id }}" placeholder="MM" min="0" max="59" value="0">m
-                    <input type="number" id="seconds-{{ timer_id }}" placeholder="SS" min="0" max="59" value="0">s
-                    <button class="set-time" data-timer-id="{{ timer_id }}">Set</button>
-                </fieldset>
-                <div class="action-buttons">
-                    <button class="start" data-timer-id="{{ timer_id }}">Start</button>
-                    <button class="pause" data-timer-id="{{ timer_id }}">Pause</button>
-                    <button class="resume" data-timer-id="{{ timer_id }}">Resume</button>
-                    <button class="reset" data-timer-id="{{ timer_id }}">Reset</button>
-                </div>
-            </div>
-            <div class="logo-controls">
-                <label for="logo-select-{{ timer_id }}">Timer Logo:</label>
-                <select id="logo-select-{{ timer_id }}" data-timer-id="{{ timer_id }}">
-                    <option value="">-- No Logo --</option>
-                    {% for logo in logos %}
-                    <option value="{{ logo.filename }}" {% if timer_details.logo_filename == logo.filename %}selected{% endif %}>{{ logo.name }}</option>
-                    {% endfor %}
-                </select>
-                 <button class="remove-logo" data-timer-id="{{ timer_id }}">Clear</button>
-            </div>
-        </section>
-        {% endfor %}
-
-        <section class="file-management-section">
-            <h2>Full Background Image</h2>
-            <p>Current: <span id="current-bg-name">{{ config.custom_background_filename or 'None' }}</span></p>
-            <form id="upload-background-form" class="upload-form">
-                <label>Upload Image (PNG, JPG, GIF):</label>
-                <input type="file" name="background_file" accept="image/png, image/jpeg, image/gif" required>
-                <button type="submit">Upload & Set</button>
-            </form>
-            <button id="delete-background-btn" class="delete-btn" {% if not config.custom_background_filename %}style="display: none;"{% endif %}>Delete Background</button>
-        </section>
-
-        <section class="file-management-section">
-            <h2>Sound Effects</h2>
-            
-            <div class="sound-group">
-                <h3>Times Up Sound</h3>
-                <p>Current: <span id="current-times_up-sound">{{ config.times_up_sound_filename or 'Default Tone' }}</span></p>
-                <form class="upload-form" data-sound-type="times_up" id="upload-times-up-sound-form">
-                    <label>Upload Audio (MP3, WAV, OGG):</label>
-                    <input type="file" name="sound_file" accept="audio/mp3, audio/wav, audio/ogg" required>
-                    <button type="submit">Upload</button>
-                </form>
-                <button id="delete-times-up-sound-btn" class="delete-btn" data-sound-type="times_up" {% if not config.times_up_sound_filename %}style="display: none;"{% endif %}>Delete Custom Sound</button>
-            </div>
-
-            <div class="sound-group" style="margin-top: 20px;">
-                <h3>Low Time Sound</h3>
-                <p>Current: <span id="current-low_time-sound">{{ config.low_time_sound_filename or 'Default Tone' }}</span></p>
-                <form class="upload-form" data-sound-type="low_time" id="upload-low-time-sound-form">
-                    <label>Upload Audio (MP3, WAV, OGG):</label>
-                    <input type="file" name="sound_file" accept="audio/mp3, audio/wav, audio/ogg" required>
-                    <button type="submit">Upload</button>
-                </form>
-                <button id="delete-low-time-sound-btn" class="delete-btn" data-sound-type="low_time" {% if not config.low_time_sound_filename %}style="display: none;"{% endif %}>Delete Custom Sound</button>
-            </div>
-        </section>
-
-        <section class="logo-management">
-            <h2>Logo Management</h2>
-            <form id="upload-logo-form">
-                <label for="common-name">Logo Name:</label>
-                <input type="text" id="common-name" name="common_name" required>
-                <label for="logo-file">Upload Logo File:</label>
-                <input type="file" id="logo-file" name="logo_file" accept="image/*" required>
-                <button type="submit">Upload Logo</button>
-            </form>
-            <h3>Available Logos:</h3>
-            <ul id="logo-list">
-                {% for logo in logos %}
-                <li data-filename="{{ logo.filename }}">{{ logo.name }} ({{ logo.filename }}) <button class="delete-logo-btn" data-filename="{{ logo.filename }}">Delete</button></li>
-                {% endfor %}
-            </ul>
-        </section>
-
-        <section class="theme-management">
-            <h2>Viewer Theme Settings</h2>
-            <form id="theme-settings-form">
-                <div class="form-row">
-                    <label for="background-color">Background Color:</label>
-                    <input type="color" id="background-color" value="#000000">
-                </div>
-                <div class="form-row">
-                    <label for="font-color">Font Color:</label>
-                    <input type="color" id="font-color" value="#FFFFFF">
-                </div>
-                <!-- NEW: Low Time Color Picker -->
-                <div class="form-row">
-                    <label for="low-time-color">Low Time Font Color:</label>
-                    <input type="color" id="low-time-color" value="#FF0000">
-                </div>
-                <div class="form-row">
-                    <label for="low-time-minutes">Low Time Warning (minutes):</label>
-                    <input type="number" id="low-time-minutes" min="1" value="5">
-                </div>
-                <div class="form-row">
-                    <label for="low-time-warning-enable">Enable Low Time Warning:</label>
+    <main class="dashboard-grid">
+        <!-- Timers Container -->
+        <div class="timers-grid">
+            {% for timer_id, timer_details in timers_status.items() %}
+            <section class="card timer-control-section" id="timer-{{ timer_id }}-section">
+                <h2>{{ timer_details.label }}
                     <label class="switch">
-                        <input type="checkbox" id="low-time-warning-enable" checked>
+                        <input type="checkbox" id="enable-timer-{{ timer_id }}" {% if timer_details.enabled %}checked{% endif %}>
                         <span class="slider round"></span>
                     </label>
+                </h2>
+                <div class="timer-admin-display" id="admin-timer-{{ timer_id }}-display">00h00m00s</div>
+                <div class="controls">
+                    <fieldset>
+                        <legend>Set Time</legend>
+                        <input type="number" id="hours-{{ timer_id }}" placeholder="HH" min="0" max="99" value="0">h
+                        <input type="number" id="minutes-{{ timer_id }}" placeholder="MM" min="0" max="59" value="0">m
+                        <input type="number" id="seconds-{{ timer_id }}" placeholder="SS" min="0" max="59" value="0">s
+                        <button class="set-time btn-primary" data-timer-id="{{ timer_id }}">Set</button>
+                    </fieldset>
+                    <div class="action-buttons">
+                        <button class="start btn-success" data-timer-id="{{ timer_id }}">Start</button>
+                        <button class="pause btn-warning" data-timer-id="{{ timer_id }}">Pause</button>
+                        <button class="resume btn-success" data-timer-id="{{ timer_id }}">Resume</button>
+                        <button class="reset btn-danger" data-timer-id="{{ timer_id }}">Reset</button>
+                    </div>
                 </div>
-                <button type="submit">Save Theme</button>
-            </form>
-        </section>
+                <div class="logo-controls">
+                    <label for="logo-select-{{ timer_id }}">Timer Logo:</label>
+                    <select id="logo-select-{{ timer_id }}" data-timer-id="{{ timer_id }}">
+                        <option value="">-- No Logo --</option>
+                        {% for logo in config.logos %}
+                        <option value="{{ logo.filename }}" {% if timer_details.logo_filename == logo.filename %}selected{% endif %}>{{ logo.name }}</option>
+                        {% endfor %}
+                    </select>
+                     <button class="remove-logo" data-timer-id="{{ timer_id }}">Clear</button>
+                </div>
+            </section>
+            {% endfor %}
+        </div>
+
+        <!-- Settings Container -->
+        <div class="settings-grid">
+            
+            <!-- 4th Square Promo -->
+            <section class="card file-management-section">
+                <h2>4th Square Promo Graphic</h2>
+                <p class="info-text">If exactly 3 timers are active, this image will fill the 4th quadrant.</p>
+                <p>Current: <span id="current-promo-name">{{ config.promo_graphic_filename or 'None' }}</span></p>
+                <form class="upload-form" id="upload-promo-form">
+                    <label>Upload Image (PNG, JPG, GIF):</label>
+                    <input type="file" name="promo_file" accept="image/png, image/jpeg, image/gif" required>
+                    <button type="submit" class="btn-primary">Upload & Set</button>
+                </form>
+                <button id="delete-promo-btn" class="btn-danger" {% if not config.promo_graphic_filename %}style="display: none;"{% endif %}>Remove Promo Graphic</button>
+            </section>
+
+            <!-- Digital Signage Settings -->
+            <section class="card file-management-section">
+                <h2>Digital Signage Mode</h2>
+                <p class="info-text">Enable this (top header) to hide timers and show a slideshow of promotions.</p>
+                <div class="form-row">
+                    <label>Image Interval (seconds):</label>
+                    <input type="number" id="signage-interval" value="{{ config.signage.interval_seconds }}" min="3">
+                    <button id="save-signage-settings" class="btn-primary">Save Interval</button>
+                </div>
+                <form class="upload-form" id="upload-signage-form" style="margin-top:15px;">
+                    <label>Add Slideshow Image:</label>
+                    <input type="file" name="signage_file" accept="image/png, image/jpeg, image/gif" required>
+                    <button type="submit" class="btn-primary">Upload to Slideshow</button>
+                </form>
+                <ul id="signage-list" class="item-list">
+                    {% for img in config.signage.images %}
+                    <li><img src="/static/signage/{{ img }}" style="height:30px; vertical-align:middle;"> {{ img }} <button class="btn-danger btn-small delete-signage-btn" data-filename="{{ img }}">X</button></li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <!-- Sound Effects -->
+            <section class="card file-management-section">
+                <h2>Sound Effects</h2>
+                <p class="info-text alert-text"><strong>Important Browser Policy:</strong> Modern web browsers require interaction before audio can play. You MUST click anywhere inside the Viewer window at least once after opening it to enable sound effects.</p>
+                
+                <div class="sound-group">
+                    <h3>Times Up Sound</h3>
+                    <p>Current: <span id="current-times_up-sound">{{ config.times_up_sound_filename or 'Default Tone' }}</span></p>
+                    <form class="upload-form" data-sound-type="times_up" id="upload-times-up-sound-form">
+                        <label>Upload Audio (MP3, WAV, OGG):</label>
+                        <input type="file" name="sound_file" accept="audio/mp3, audio/wav, audio/ogg" required>
+                        <button type="submit" class="btn-primary">Upload</button>
+                    </form>
+                    <button id="delete-times-up-sound-btn" class="btn-danger" data-sound-type="times_up" {% if not config.times_up_sound_filename %}style="display: none;"{% endif %}>Delete Custom Sound</button>
+                </div>
+
+                <div class="sound-group" style="margin-top: 20px;">
+                    <h3>Low Time Sound</h3>
+                    <p>Current: <span id="current-low_time-sound">{{ config.low_time_sound_filename or 'Default Tone' }}</span></p>
+                    <form class="upload-form" data-sound-type="low_time" id="upload-low-time-sound-form">
+                        <label>Upload Audio (MP3, WAV, OGG):</label>
+                        <input type="file" name="sound_file" accept="audio/mp3, audio/wav, audio/ogg" required>
+                        <button type="submit" class="btn-primary">Upload</button>
+                    </form>
+                    <button id="delete-low-time-sound-btn" class="btn-danger" data-sound-type="low_time" {% if not config.low_time_sound_filename %}style="display: none;"{% endif %}>Delete Custom Sound</button>
+                </div>
+            </section>
+            
+            <section class="card file-management-section">
+                <h2>Full Background Image</h2>
+                <p>Current: <span id="current-bg-name">{{ config.custom_background_filename or 'None' }}</span></p>
+                <form id="upload-background-form" class="upload-form">
+                    <label>Upload Image (PNG, JPG, GIF):</label>
+                    <input type="file" name="background_file" accept="image/png, image/jpeg, image/gif" required>
+                    <button type="submit" class="btn-primary">Upload & Set</button>
+                </form>
+                <button id="delete-background-btn" class="btn-danger" {% if not config.custom_background_filename %}style="display: none;"{% endif %}>Delete Background</button>
+            </section>
+
+            <section class="card theme-management">
+                <h2>Viewer Theme Settings</h2>
+                <form id="theme-settings-form">
+                    <div class="form-row">
+                        <label for="background-color">Background Color:</label>
+                        <input type="color" id="background-color" value="{{ config.theme.background }}">
+                    </div>
+                    <div class="form-row">
+                        <label for="font-color">Font Color:</label>
+                        <input type="color" id="font-color" value="{{ config.theme.font_color }}">
+                    </div>
+                    <div class="form-row">
+                        <label for="low-time-color">Low Time Font Color:</label>
+                        <input type="color" id="low-time-color" value="{{ config.theme.low_time_color }}">
+                    </div>
+                    <div class="form-row">
+                        <label for="low-time-minutes">Low Time Warning (mins):</label>
+                        <input type="number" id="low-time-minutes" min="1" value="{{ config.theme.low_time_minutes }}">
+                    </div>
+                    <div class="form-row">
+                        <label for="low-time-warning-enable">Enable Low Time Warning:</label>
+                        <label class="switch">
+                            <input type="checkbox" id="low-time-warning-enable" {% if config.theme.warning_enabled %}checked{% endif %}>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary">Save Theme</button>
+                </form>
+            </section>
+        </div>
     </main>
+    
     <div id="change-pin-modal" class="modal" style="display:none;">
-        <div class="modal-content">
+        <div class="modal-content card">
             <span class="close-btn">&times;</span>
             <h2>Change Admin PIN</h2>
             <form id="change-pin-form">
-                <label for="current-pin">Current PIN:</label>
-                <input type="password" id="current-pin" inputmode="numeric" maxlength="5" required>
-                <label for="new-pin1">New PIN:</label>
-                <input type="password" id="new-pin1" inputmode="numeric" maxlength="5" required>
-                <label for="new-pin2">Confirm New PIN:</label>
-                <input type="password" id="new-pin2" inputmode="numeric" maxlength="5" required>
-                <button type="submit">Update PIN</button>
-                <p id="pin-change-status" class="status-message"></p>
+                <label>Current PIN:</label> <input type="password" id="current-pin" maxlength="5" required>
+                <label>New PIN:</label> <input type="password" id="new-pin1" maxlength="5" required>
+                <label>Confirm New PIN:</label> <input type="password" id="new-pin2" maxlength="5" required>
+                <button type="submit" class="btn-primary">Update PIN</button>
+                <p id="pin-change-status"></p>
             </form>
         </div>
     </div>
