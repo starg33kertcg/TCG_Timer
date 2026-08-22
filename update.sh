@@ -64,6 +64,9 @@ echo "Ensuring directory structure..."
 mkdir -p "$INSTALL_DIR/static/audio"
 mkdir -p "$INSTALL_DIR/static/backgrounds"
 mkdir -p "$INSTALL_DIR/static/uploads"
+# --- NEW DIRECTORIES FOR 4-TIMER UPDATE ---
+mkdir -p "$INSTALL_DIR/static/promo"
+mkdir -p "$INSTALL_DIR/static/signage"
 
 # --- 9. Fix Permissions ---
 SERVICE_USER=$(grep '^User=' "$SERVICE_FILE" | cut -d= -f2)
