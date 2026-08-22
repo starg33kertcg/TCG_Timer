@@ -39,13 +39,6 @@ header h1 {
     background-color: #394857;
 }
 
-/* Header Switch (Signage) */
-.header-switch {
-    display: flex;
-    align-items: center;
-    margin-right: 20px;
-}
-
 /* Dark Theme overrides */
 body.admin-dashboard-body.dark-theme {
     background-color: #2c3e50;
@@ -68,6 +61,7 @@ body.dark-theme section, body.dark-theme .card {
 }
 body.dark-theme input[type="text"],
 body.dark-theme input[type="number"],
+body.dark-theme input[type="password"],
 body.dark-theme input[type="file"],
 body.dark-theme select {
     background-color: #4a5a6a;
@@ -93,7 +87,7 @@ body.dark-theme .timer-admin-display {
     border: 1px solid #405261;
 }
 
-/* --- GRID LAYOUT --- */
+/* --- DASHBOARD GRID --- */
 .dashboard-grid {
     padding: 20px;
     display: grid;
@@ -108,6 +102,7 @@ body.dark-theme .timer-admin-display {
     display: grid;
     grid-template-columns: 1fr;
     gap: 15px;
+    align-items: start;
 }
 @media (min-width: 800px) {
     .timers-grid { grid-template-columns: 1fr 1fr; }
@@ -164,6 +159,7 @@ legend { font-weight: bold; padding: 0 5px; }
 
 input[type="text"],
 input[type="number"],
+input[type="password"],
 input[type="file"],
 select {
     width: calc(100% - 22px); 
@@ -173,7 +169,13 @@ select {
     border-radius: 4px;
     box-sizing: border-box;
 }
-input[type="number"] {
+
+.form-row input[type="number"] {
+    width: 80px;
+    margin-bottom: 0px;
+    margin-right: 10px;
+}
+fieldset input[type="number"] {
     width: 60px;
     margin-right: 5px;
     text-align: right;
@@ -191,12 +193,6 @@ button, input[type="submit"], .btn-primary {
     margin: 5px 2px;
 }
 button:hover, input[type="submit"]:hover, .btn-primary:hover { background-color: #0056b3; }
-
-.btn-success { background-color: #2ecc71; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
-.btn-success:hover { background-color: #27ae60; }
-
-.btn-warning { background-color: #f1c40f; color: #333; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
-.btn-warning:hover { background-color: #f39c12; }
 
 .btn-danger { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
 .btn-danger:hover { background-color: #c82333; }
@@ -247,6 +243,11 @@ input:checked + .slider:before { transform: translateX(22px); }
 /* Info and Alert Texts */
 .info-text { font-size: 0.9em; color: #7f8c8d; font-style: italic; margin-bottom: 15px; }
 .alert-text { color: #c0392b; font-weight: bold; background: #fadbd8; padding: 10px; border-radius: 5px; border-left: 4px solid #c0392b;}
+body.dark-theme .alert-text { 
+    background-color: #3b2020; 
+    color: #ff6b6b; 
+    border-left-color: #ff6b6b; 
+}
 
 /* Lists */
 .item-list { list-style: none; padding: 0; }
