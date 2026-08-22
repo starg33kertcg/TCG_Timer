@@ -10,7 +10,7 @@
     <header>
         <h1>TCG Timer Admin</h1>
         <div style="display: flex; align-items: center; justify-content: flex-end; flex-grow: 1;">
-        
+            
             <div style="display: flex; align-items: center; margin-right: 20px;">
                 <label class="switch" title="Toggle Digital Signage Mode" style="margin: 0;">
                     <input type="checkbox" id="toggle-signage-global" {% if config.signage.enabled %}checked{% endif %}>
@@ -72,20 +72,37 @@
         <!-- Settings Container -->
         <div class="settings-grid">
             
-            <!-- 4th Square Promo -->
-            <section class="card file-management-section">
-                <h2>4th Square Promo Graphic</h2>
-                <p class="info-text">If exactly 3 timers are active, this image will fill the 4th quadrant.</p>
-                <p>Current: <span id="current-promo-name">{{ config.promo_graphic_filename or 'None' }}</span></p>
-                <form class="upload-form" id="upload-promo-form">
-                    <label>Upload Image (PNG, JPG, GIF):</label>
-                    <input type="file" name="promo_file" accept="image/png, image/jpeg, image/gif" required>
-                    <button type="submit" class="btn-primary">Upload & Set</button>
+            <!-- Logo Management -->
+            <section class="card logo-management">
+                <h2>Logo Management</h2>
+                <form id="upload-logo-form" class="upload-form">
+                    <label for="common-name">Logo Name:</label>
+                    <input type="text" id="common-name" name="common_name" required>
+                    <label for="logo-file">Upload Logo File:</label>
+                    <input type="file" id="logo-file" name="logo_file" accept="image/*" required>
+                    <button type="submit" class="btn-primary">Upload Logo</button>
                 </form>
-                <button id="delete-promo-btn" class="btn-danger" {% if not config.promo_graphic_filename %}style="display: none;"{% endif %}>Remove Promo Graphic</button>
+                <h3>Available Logos:</h3>
+                <ul id="logo-list" class="item-list">
+                    {% for logo in config.logos %}
+                    <li>{{ logo.name }} ({{ logo.filename }}) <button class="delete-logo-btn btn-danger btn-small" data-filename="{{ logo.filename }}">Delete</button></li>
+                    {% endfor %}
+                </ul>
             </section>
 
-            <!-- Digital Signage Settings -->
+            <!-- Full Background Image -->
+            <section class="card file-management-section">
+                <h2>Full Background Image</h2>
+                <p>Current: <span id="current-bg-name">{{ config.custom_background_filename or 'None' }}</span></p>
+                <form id="upload-background-form" class="upload-form">
+                    <label>Upload Image (PNG, JPG, GIF):</label>
+                    <input type="file" name="background_file" accept="image/png, image/jpeg, image/gif" required>
+                    <button type="submit" class="btn-primary">Upload & Set</button>
+                </form>
+                <button id="delete-background-btn" class="btn-danger" {% if not config.custom_background_filename %}style="display: none;"{% endif %}>Delete Background</button>
+            </section>
+
+            <!-- Digital Signage Mode -->
             <section class="card file-management-section">
                 <h2>Digital Signage Mode</h2>
                 <p class="info-text">Enable this (top header) to hide timers and show a slideshow of promotions.</p>
@@ -101,9 +118,31 @@
                 </form>
                 <ul id="signage-list" class="item-list">
                     {% for img in config.signage.images %}
-                    <li><img src="/static/signage/{{ img }}" style="height:30px; vertical-align:middle;"> {{ img }} <button class="btn-danger btn-small delete-signage-btn" data-filename="{{ img }}">X</button></li>
+                    <li>
+                        <div class="signage-item-left">
+                            <img src="/static/signage/{{ img }}" style="height:30px; vertical-align:middle; margin-right: 10px;"> {{ img }}
+                        </div>
+                        <div class="signage-item-right">
+                            <button class="btn-primary btn-small move-up-btn" data-index="{{ loop.index0 }}">▲</button>
+                            <button class="btn-primary btn-small move-down-btn" data-index="{{ loop.index0 }}">▼</button>
+                            <button class="btn-danger btn-small delete-signage-btn" data-filename="{{ img }}">X</button>
+                        </div>
+                    </li>
                     {% endfor %}
                 </ul>
+            </section>
+
+            <!-- 4th Square Promo Graphic -->
+            <section class="card file-management-section">
+                <h2>4th Square Promo Graphic</h2>
+                <p class="info-text">If exactly 3 timers are active, this image will fill the 4th quadrant.</p>
+                <p>Current: <span id="current-promo-name">{{ config.promo_graphic_filename or 'None' }}</span></p>
+                <form class="upload-form" id="upload-promo-form">
+                    <label>Upload Image (PNG, JPG, GIF):</label>
+                    <input type="file" name="promo_file" accept="image/png, image/jpeg, image/gif" required>
+                    <button type="submit" class="btn-primary">Upload & Set</button>
+                </form>
+                <button id="delete-promo-btn" class="btn-danger" {% if not config.promo_graphic_filename %}style="display: none;"{% endif %}>Remove Promo Graphic</button>
             </section>
 
             <!-- Sound Effects -->
@@ -134,36 +173,7 @@
                 </div>
             </section>
             
-            <!-- Full Background Image -->
-            <section class="card file-management-section">
-                <h2>Full Background Image</h2>
-                <p>Current: <span id="current-bg-name">{{ config.custom_background_filename or 'None' }}</span></p>
-                <form id="upload-background-form" class="upload-form">
-                    <label>Upload Image (PNG, JPG, GIF):</label>
-                    <input type="file" name="background_file" accept="image/png, image/jpeg, image/gif" required>
-                    <button type="submit" class="btn-primary">Upload & Set</button>
-                </form>
-                <button id="delete-background-btn" class="btn-danger" {% if not config.custom_background_filename %}style="display: none;"{% endif %}>Delete Background</button>
-            </section>
-
-            <!-- Logo Management -->
-            <section class="card logo-management">
-                <h2>Logo Management</h2>
-                <form id="upload-logo-form" class="upload-form">
-                    <label for="common-name">Logo Name:</label>
-                    <input type="text" id="common-name" name="common_name" required>
-                    <label for="logo-file">Upload Logo File:</label>
-                    <input type="file" id="logo-file" name="logo_file" accept="image/*" required>
-                    <button type="submit" class="btn-primary">Upload Logo</button>
-                </form>
-                <h3>Available Logos:</h3>
-                <ul id="logo-list" class="item-list">
-                    {% for logo in config.logos %}
-                    <li>{{ logo.name }} ({{ logo.filename }}) <button class="delete-logo-btn btn-danger btn-small" data-filename="{{ logo.filename }}">Delete</button></li>
-                    {% endfor %}
-                </ul>
-            </section>
-
+            <!-- Viewer Theme Settings -->
             <section class="card theme-management">
                 <h2>Viewer Theme Settings</h2>
                 <form id="theme-settings-form">
@@ -193,6 +203,7 @@
                     <button type="submit" class="btn-primary">Save Theme</button>
                 </form>
             </section>
+
         </div>
     </main>
     
