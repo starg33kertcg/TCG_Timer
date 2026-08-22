@@ -84,6 +84,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (enableToggle) {
             enableToggle.addEventListener('change', async function() {
+                // Fixes Issue #5: Prevents enabling timer if time is zero
+                const display = document.getElementById(`admin-timer-${timerId}-display`).textContent;
+                if (this.checked && (display === '00h00m00s' || display === '00:00:00')) {
+                    alert("Please set a time greater than 0 before enabling this timer.");
+                    this.checked = false;
+                    return;
+                }
+                
                 await callApi(`/api/control_timer/${timerId}`, 'POST', { action: 'toggle_enable', enabled: this.checked });
                 fetchAndUpdateAdminTimerDisplays();
             });
@@ -184,7 +192,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Process Sound Effect Forms
     document.querySelectorAll('.upload-form').forEach(form => {
         const type = form.getAttribute('data-sound-type');
         if (!type) return; 
@@ -196,25 +203,27 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
     
-    // Process Background and Sound Effect Delete Buttons
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', async function() {
-            let url = '';
-            const type = this.getAttribute('data-sound-type');
-            if (this.id === 'delete-background-btn') url = '/api/delete_background';
-            else if (type) url = `/api/delete_sound/${type}`;
-            
-            if (url && confirm("Are you sure you want to delete this custom file?")) {
-                const res = await fetch(url, { method: 'DELETE' });
-                const data = await res.json();
-                if (res.ok) { alert(data.message); location.reload(); }
-                else alert("Error: " + data.error);
-            }
-        });
-    });
+    function setupDeleteButton(btnId, apiRoute, successMsg) {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.addEventListener('click', async function() {
+                if (confirm('Are you sure you want to delete this custom file?')) {
+                    const res = await fetch(apiRoute, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (res.ok) { alert(data.message || successMsg); location.reload(); }
+                    else alert("Error: " + data.error);
+                }
+            });
+        }
+    }
+
+    setupDeleteButton('delete-background-btn', '/api/delete_background', 'Background removed.');
+    setupDeleteButton('delete-promo-btn', '/api/delete_promo', 'Promo removed.');
+    setupDeleteButton('delete-times-up-sound-btn', '/api/delete_times_up_sound', 'Sound removed.');
+    setupDeleteButton('delete-low-time-sound-btn', '/api/delete_low_time_sound', 'Sound removed.');
+
 
     // --- PROMO & SIGNAGE LOGIC ---
-
     const promoForm = document.getElementById('upload-promo-form');
     if (promoForm) {
         promoForm.addEventListener('submit', async function(e) {
@@ -226,16 +235,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('delete-promo-btn').style.display = 'inline-block'; 
                 this.reset(); 
             } else alert("Error: " + res.error);
-        });
-    }
-
-    const deletePromoBtn = document.getElementById('delete-promo-btn');
-    if (deletePromoBtn) {
-        deletePromoBtn.addEventListener('click', async function() {
-            if (confirm("Remove Promo Graphic?")) {
-                const res = await fetch('/api/delete_promo', { method: 'DELETE' });
-                if (res.ok) location.reload();
-            }
         });
     }
 
@@ -320,4 +319,40 @@ document.addEventListener('DOMContentLoaded', function () {
     loadLogos();
     fetchAndUpdateAdminTimerDisplays(); 
     setInterval(fetchAndUpdateAdminTimerDisplays, 2000); 
+    
+    // --- PIN Management ---
+    const changePinBtn = document.getElementById('change-pin-btn');
+    const changePinModal = document.getElementById('change-pin-modal');
+    const closeBtn = document.querySelector('.close-btn');
+    const changePinForm = document.getElementById('change-pin-form');
+    const pinChangeStatus = document.getElementById('pin-change-status');
+
+    if (changePinBtn && changePinModal) {
+        changePinBtn.addEventListener('click', () => { changePinModal.style.display = "block"; pinChangeStatus.textContent = ''; });
+        closeBtn.addEventListener('click', () => { changePinModal.style.display = "none"; });
+        window.addEventListener('click', (event) => { if (event.target == changePinModal) { changePinModal.style.display = "none"; }});
+
+        changePinForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const currentPin = document.getElementById('current-pin').value;
+            const newPin1 = document.getElementById('new-pin1').value;
+            const newPin2 = document.getElementById('new-pin2').value;
+
+            if (newPin1 !== newPin2) {
+                pinChangeStatus.textContent = "New PINs do not match!";
+                pinChangeStatus.style.color = "red";
+                return;
+            }
+
+            const response = await callApi('/api/change_pin', 'POST', { current_pin: currentPin, new_pin: newPin1 });
+            if (response && response.ok) {
+                pinChangeStatus.textContent = response.data.message || "PIN changed successfully!";
+                pinChangeStatus.style.color = "green";
+                setTimeout(() => { changePinModal.style.display = "none"; this.reset(); }, 2000);
+            } else {
+                pinChangeStatus.textContent = (response && response.data && response.data.error) ? response.data.error : "Failed to change PIN.";
+                pinChangeStatus.style.color = "red";
+            }
+        });
+    }
 });
