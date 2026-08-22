@@ -358,6 +358,27 @@ def delete_signage(filename):
         save_config(cfg)
     return jsonify({"message": "Deleted"})
 
+@app.route('/api/reorder_signage', methods=['POST'])
+@login_required
+def reorder_signage():
+    data = request.get_json()
+    direction = data.get('direction')
+    index = data.get('index')
+    
+    cfg = load_config()
+    images = cfg.get('signage', {}).get('images', [])
+    
+    if 0 <= index < len(images):
+        if direction == 'up' and index > 0:
+            images[index - 1], images[index] = images[index], images[index - 1]
+        elif direction == 'down' and index < len(images) - 1:
+            images[index + 1], images[index] = images[index], images[index + 1]
+        
+        cfg['signage']['images'] = images
+        save_config(cfg)
+        return jsonify({"message": "Reordered successfully"})
+    return jsonify({"error": "Invalid operation"}), 400
+
 # --- Theme & PIN Management ---
 @app.route('/api/theme', methods=['GET', 'POST'])
 @login_required
