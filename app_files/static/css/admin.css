@@ -87,12 +87,13 @@ body.dark-theme .timer-admin-display {
     border: 1px solid #405261;
 }
 
-/* --- DASHBOARD GRID --- */
+/* --- GRID LAYOUT --- */
 .dashboard-grid {
     padding: 20px;
     display: grid;
     grid-template-columns: 1fr;
     gap: 20px;
+    align-items: start;
 }
 @media (min-width: 1200px) {
     .dashboard-grid { grid-template-columns: 1fr 1fr; }
@@ -102,7 +103,7 @@ body.dark-theme .timer-admin-display {
     display: grid;
     grid-template-columns: 1fr;
     gap: 15px;
-    align-items: start;
+    align-items: start; 
 }
 @media (min-width: 800px) {
     .timers-grid { grid-template-columns: 1fr 1fr; }
@@ -172,7 +173,7 @@ select {
 
 .form-row input[type="number"] {
     width: 80px;
-    margin-bottom: 0px;
+    margin-bottom: 0px; 
     margin-right: 10px;
 }
 fieldset input[type="number"] {
@@ -243,6 +244,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 /* Info and Alert Texts */
 .info-text { font-size: 0.9em; color: #7f8c8d; font-style: italic; margin-bottom: 15px; }
 .alert-text { color: #c0392b; font-weight: bold; background: #fadbd8; padding: 10px; border-radius: 5px; border-left: 4px solid #c0392b;}
+
 body.dark-theme .alert-text { 
     background-color: #3b2020; 
     color: #ff6b6b; 
@@ -265,6 +267,9 @@ body.dark-theme .item-list li {
     background-color: #4a5a6a;
     border-color: #5d6d7e;
 }
+
+.signage-item-left { display: flex; align-items: center; }
+.signage-item-right button { margin: 0 2px; }
 
 /* PIN Modal Styles */
 .modal {
