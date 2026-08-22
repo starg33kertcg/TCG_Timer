@@ -32,6 +32,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById(this.dataset.target).classList.add('active');
+        });
+    });
+
     const themeForm = document.getElementById('theme-settings-form');
     if (themeForm) {
         const bgColorInput = document.getElementById('background-color');
@@ -71,6 +80,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    let currentTimerState = {};
+
     document.querySelectorAll('.timer-control-section').forEach(section => {
         const timerId = section.id.split('-')[1];
         const enableToggle = section.querySelector(`#enable-timer-${timerId}`);
@@ -84,8 +95,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (enableToggle) {
             enableToggle.addEventListener('change', async function() {
-                const display = document.getElementById(`admin-timer-${timerId}-display`).textContent;
-                if (this.checked && (display === '00h00m00s' || display === '00:00:00')) {
+                let timeRem = 0;
+                if (currentTimerState[timerId]) {
+                    timeRem = currentTimerState[timerId].time_remaining_seconds;
+                }
+                
+                if (this.checked && timeRem <= 0) {
                     alert("Please set a time greater than 0 before enabling this timer.");
                     this.checked = false;
                     return;
@@ -274,13 +289,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- REORDER SIGNAGE LOGIC ---
     document.querySelectorAll('.move-up-btn, .move-down-btn').forEach(btn => {
-        btn.addEventListener('click', async function() {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault();
             const index = parseInt(this.dataset.index);
             const direction = this.classList.contains('move-up-btn') ? 'up' : 'down';
             
             const result = await callApi('/api/reorder_signage', 'POST', { index: index, direction: direction });
             if (result && result.ok) {
                 location.reload();
+            } else {
+                alert("Failed to reorder image.");
             }
         });
     });
@@ -297,10 +315,11 @@ document.addEventListener('DOMContentLoaded', function () {
     async function fetchAndUpdateAdminTimerDisplays() {
         const response = await callApi('/api/timer_status');
         if (response && response.ok && response.data.timers) {
-            const statusData = response.data.timers;
-            for (const timerId in statusData) {
-                if (statusData.hasOwnProperty(timerId)) {
-                    const data = statusData[timerId];
+            currentTimerState = response.data.timers; 
+            
+            for (const timerId in currentTimerState) {
+                if (currentTimerState.hasOwnProperty(timerId)) {
+                    const data = currentTimerState[timerId];
                     const displayEl = document.getElementById(`admin-timer-${timerId}-display`);
                     if (displayEl) {
                         if (data.enabled) {
